@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from sqlalchemy import event
+from sqlalchemy import event, inspect
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import get_settings
 
@@ -49,3 +49,32 @@ def get_session() -> Iterator[Session]:
     """FastAPI dependency yielding a session."""
     with Session(get_engine()) as session:
         yield session
+
+
+class MigrationsNotAppliedError(RuntimeError):
+    """Raised at startup when the DB schema is missing required tables.
+
+    The poller resumes by reading the ``InstanceConfig`` rows on restart
+    (PRD §7.3.1), so the schema MUST be migrated (``alembic upgrade head``)
+    before the supervisor starts — otherwise the first poll silently sees no
+    enabled configs.
+    """
+
+
+def assert_schema_ready(engine: Engine) -> None:
+    """Guard: every mapped table must exist before workers start (task 8.2).
+
+    Fails fast with an actionable message instead of letting the supervisor
+    spin against an un-migrated DB.
+    """
+    import app.db.models  # noqa: F401  (register tables on metadata)
+
+    inspector = inspect(engine)
+    existing = set(inspector.get_table_names())
+    required = set(SQLModel.metadata.tables)
+    missing = required - existing
+    if missing:
+        raise MigrationsNotAppliedError(
+            "DB schema is not migrated — run `alembic upgrade head` before "
+            f"startup. Missing tables: {sorted(missing)}"
+        )

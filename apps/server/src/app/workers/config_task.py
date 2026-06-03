@@ -328,7 +328,15 @@ async def poll_once(
 
 
 async def run_config_task(engine: Engine, config_id: int) -> None:
-    """Poll until success / auth error / cancellation (PRD §7.3.1)."""
+    """Poll until success / auth error / cancellation (PRD §7.3.1).
+
+    Restart semantics (task 8.2): the rate-limit backoff multiplier and the
+    tenacity retry counter are *local* to this coroutine — they are never
+    persisted. On a process restart the supervisor re-spawns a fresh task for
+    every still-``enabled`` config, so any prior ``rate_limited`` backoff is
+    discarded and the loop retries immediately. Only the durable ``enabled``
+    flag decides whether a config resumes.
+    """
     logger.info("config task 시작", extra={"config_id": config_id})
     try:
         while True:

@@ -27,7 +27,7 @@ from app.api.deps import RequestIdMiddleware
 from app.api.errors import rate_limit_handler, register_error_handlers
 from app.api.ratelimit import limiter
 from app.config import get_settings
-from app.db.session import get_engine
+from app.db.session import assert_schema_ready, get_engine
 from app.log_bus import attach_log_bus, log_bus
 from app.logging_config import configure_logging
 from app.workers.log_pruner import run_log_pruner
@@ -46,6 +46,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging(engine=engine)
     attach_log_bus(level=db_level)
     log_bus.bind_loop()
+    # Guard: the supervisor resumes by reading enabled InstanceConfig rows
+    # (PRD §7.3.1), so the schema must be migrated before it starts. Fail fast
+    # with an actionable message instead of polling an un-migrated DB (task 8.2).
+    assert_schema_ready(engine)
     # Background workers (PRD §7.3.1, §9.3.8): poller supervisor manages a
     # per-config polling task; log_pruner enforces retention.
     pruner_task = asyncio.create_task(run_log_pruner(engine))
