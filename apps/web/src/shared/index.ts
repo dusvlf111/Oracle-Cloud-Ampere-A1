@@ -1,2 +1,4 @@
 export { cn } from "./lib";
-export { Button } from "./ui";
+export { Button, Input, Label } from "./ui";
+export { apiFetch, ApiError, isApiError } from "./http";
+export type { RequestOptions, ApiErrorEnvelope } from "./http";
