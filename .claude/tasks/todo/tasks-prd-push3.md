@@ -51,9 +51,9 @@
     - [x] 3.3 `LogBus` + `LogBusHandler` — `log_bus.py` (subscribe 컨텍스트매니저, `put_nowait` + QueueFull 드롭, maxsize 500), 핸들러가 `publish()` 호출, 루트 로거에 3핸들러 부착
         - [x] 3.3.T1 pytest 테스트 작성 — `tests/unit/test_log_bus.py` (구독자 수신, 다중 구독자, 가득 찬 큐 드롭, 구독 해제 후 미수신)
         - [x] 3.3.T2 `pytest -q tests/unit/test_log_bus.py` 실행 및 검증
-    - [ ] 3.4 로그 조회/삭제 API — `GET /api/logs` (levels 멀티/logger prefix/config_id/since/until/q LIKE/limit + base64 cursor 페이지네이션 → `LogPage{items, next_cursor, has_more}`), `DELETE /api/logs?before=<iso>` 204 (PRD §8)
-        - [ ] 3.4.T1 pytest 테스트 작성 — `tests/api/test_logs.py` (필터 조합, 커서 연속 조회, 검색, 삭제 후 미조회, 미인증 401)
-        - [ ] 3.4.T2 `pytest -q tests/api/test_logs.py` 실행 및 검증
+    - [x] 3.4 로그 조회/삭제 API — `GET /api/logs` (levels 멀티/logger prefix/config_id/since/until/q LIKE/limit + base64 cursor 페이지네이션 → `LogPage{items, next_cursor, has_more}`), `DELETE /api/logs?before=<iso>` 204 (PRD §8)
+        - [x] 3.4.T1 pytest 테스트 작성 — `tests/api/test_logs.py` (필터 조합, 커서 연속 조회, 검색, 삭제 후 미조회, 미인증 401)
+        - [x] 3.4.T2 `pytest -q tests/api/test_logs.py` 실행 및 검증
     - [ ] 3.5 SSE 스트림 + log_pruner — `GET /api/logs/stream` (sse-starlette, LogBus 구독, 필터 쿼리, 15초 `ping` heartbeat), `workers/log_pruner.py` (5분 주기, 7일/10,000행 cutoff DELETE, `AppSetting` 정책 값)
         - [ ] 3.5.T1 pytest 테스트 작성 — `tests/api/test_logs_stream.py` (publish → SSE 이벤트 수신, 필터 미일치 미수신), `tests/unit/workers/test_log_pruner.py` (기간/행수 초과 삭제)
         - [ ] 3.5.T2 `pytest -q tests/api/test_logs_stream.py tests/unit/workers/test_log_pruner.py` 실행 및 검증

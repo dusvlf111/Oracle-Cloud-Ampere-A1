@@ -17,6 +17,7 @@ from starlette.middleware.sessions import SessionMiddleware
 import logging
 
 from app.api import auth as auth_api
+from app.api import logs as logs_api
 from app.api.deps import RequestIdMiddleware
 from app.api.errors import rate_limit_handler, register_error_handlers
 from app.api.ratelimit import limiter
@@ -67,6 +68,7 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 # Routers.
 app.include_router(auth_api.router)
+app.include_router(logs_api.router)
 
 
 @app.get("/healthz", tags=["meta"])

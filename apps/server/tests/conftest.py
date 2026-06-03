@@ -85,3 +85,32 @@ def engine():
 def session(engine) -> Iterator[Session]:
     with Session(engine) as s:
         yield s
+
+
+@pytest.fixture
+def db_app(engine) -> Iterator[None]:
+    """Point the app's ``get_session`` dependency at the in-memory test engine."""
+    from app.db.session import get_session as real_get_session
+
+    def _override() -> Iterator[Session]:
+        with Session(engine) as s:
+            yield s
+
+    app.dependency_overrides[real_get_session] = _override
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(real_get_session, None)
+
+
+@pytest_asyncio.fixture
+async def authed_db_client(admin_settings, db_app) -> AsyncClient:
+    """Logged-in AsyncClient whose log routes hit the in-memory test DB."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post(
+            "/api/auth/login",
+            json={"username": TEST_USERNAME, "password": TEST_PASSWORD},
+        )
+        assert resp.status_code == 200, resp.text
+        yield ac
