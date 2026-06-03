@@ -72,6 +72,7 @@ docker compose up -d
 | itsdangerous | 세션 쿠키 서명 (SessionMiddleware) | BSD-3 |
 | slowapi | 로그인 rate limit (메모리 backend) | MIT |
 | python-ulid | 요청 ID (ULID) 부여 | MIT |
+| sse-starlette | 로그 실시간 스트림 SSE (`/api/logs/stream`, EventSourceResponse) | BSD-3 |
 
 ### Web (Node, pnpm)
 
@@ -84,6 +85,7 @@ docker compose up -d
 | react-hook-form | 폼 상태 관리 | MIT |
 | zod | 런타임 스키마 검증 (폼/에러 파싱) | MIT |
 | @hookform/resolvers | react-hook-form ↔ zod 연결 | MIT |
+| @tanstack/react-virtual | 로그 뷰어 가상 스크롤 (500행 초과 시) | MIT |
 | eslint, typescript-eslint, eslint-config-next | 린트 | MIT |
 | eslint-plugin-boundaries, eslint-plugin-import, eslint-import-resolver-typescript | FSD 레이어 규칙 강제 | MIT |
 | vitest, @vitejs/plugin-react, jsdom | 테스트 러너 | MIT |
