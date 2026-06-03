@@ -19,12 +19,32 @@
 
 ---
 
+### 에이전트 실행 전략 (push-lead)
+
+| 작업 | 담당 | 의존성 |
+|---|---|---|
+| 6.1 → 6.2 → 6.3 | `server-worker` | 순차 (폴링 루프 → 에러/알림 → supervisor 통합) |
+| 6.4 → 6.5 | `web-worker` | Push 5 의 Orval 클라이언트 (attempts 훅) — server 체인과 병렬 |
+| 6.6 | push-lead 직접 (문서) + `test-runner` (최종 게이트) | 6.1~6.5 전체 |
+
+```
+[server-worker] 6.1 → 6.2 → 6.3 ──┬→ 6.6 (배리어: 문서 + 최종 검증)
+[web-worker]    6.4 → 6.5 ────────┘
+```
+
+- **병렬**: server 워커 체인(6.1~6.3) ∥ web 대시보드 체인(6.4~6.5)
+- 6.3.T1 통합 테스트는 `test-runner` 가 아닌 `server-worker` 가 작성 (도메인 지식 필요), test-runner 는 실행/분석 담당
+- 6.6.T2 가 MVP 전체 성공 기준 (PRD §13) 최종 게이트 — 실패 시 test-runner 가 수정 가능하면 직접 수정, 설계 문제는 T3 등록
+- 참조 스킬: `fastapi-patterns`, `python-testing`, `oci-sdk`, `notification-channels` / `fsd-architecture`, `web-testing`
+
+---
+
 ## 작업
 
 - [ ] 6.0 폴링 워커 + 대시보드 (Push 6)
-    - [ ] 6.1 config_task 폴링 루프 — `workers/config_task.py` (자체 `retry_interval_sec` sleep + 전역 최소 200ms 가드, `credential_semaphores[credential_id]` (기본 max=1, env `OCI_PER_CREDENTIAL_MAX`) + 전역 `Semaphore(OCI_MAX_CONCURRENT)`, `asyncio.to_thread` launch_instance, 성공 → `Attempt(success)` + `enabled=False` + 자가 종료, `OutOfCapacity` → `Attempt(out_of_capacity)` 기록만, task 단위 세션 분리, 로그 컨텍스트 `extra=` 동봉)
-        - [ ] 6.1.T1 pytest 테스트 작성 — `tests/unit/workers/test_config_task.py` (OCI mock: 성공 시 Attempt+비활성화+종료, 용량 부족 시 기록 후 재시도 sleep, 같은 credential 2-task 직렬화 / 다른 credential 병렬 실행 검증)
-        - [ ] 6.1.T2 `pytest -q tests/unit/workers/test_config_task.py` 실행 및 검증
+    - [x] 6.1 config_task 폴링 루프 — `workers/config_task.py` (자체 `retry_interval_sec` sleep + 전역 최소 200ms 가드, `credential_semaphores[credential_id]` (기본 max=1, env `OCI_PER_CREDENTIAL_MAX`) + 전역 `Semaphore(OCI_MAX_CONCURRENT)`, `asyncio.to_thread` launch_instance, 성공 → `Attempt(success)` + `enabled=False` + 자가 종료, `OutOfCapacity` → `Attempt(out_of_capacity)` 기록만, task 단위 세션 분리, 로그 컨텍스트 `extra=` 동봉)
+        - [x] 6.1.T1 pytest 테스트 작성 — `tests/unit/workers/test_config_task.py` (OCI mock: 성공 시 Attempt+비활성화+종료, 용량 부족 시 기록 후 재시도 sleep, 같은 credential 2-task 직렬화 / 다른 credential 병렬 실행 검증)
+        - [x] 6.1.T2 `pytest -q tests/unit/workers/test_config_task.py` 실행 및 검증
     - [ ] 6.2 에러 처리 + 알림 연동 — 429 → tenacity 지수 백오프 + `rate_limited` 기록 + sleep 연장, 인증/권한 오류 → `auth_error` + `enabled=False` + 인증 오류 알림 (priority 4) + 종료, 성공 시 연결된 모든 채널 `asyncio.gather(..., return_exceptions=True)` 병렬 발송 (priority 5), `OutOfCapacity` 는 무알림 (PRD §7.5.3)
         - [ ] 6.2.T1 pytest 테스트 작성 — 429 백오프 동작, auth_error 시 비활성화+알림 mock 호출 검증, 성공 시 다중 채널 병렬 발송 (1개 채널 실패해도 나머지 발송), out_of_capacity 무알림
         - [ ] 6.2.T2 `pytest -q tests/unit/workers/` 실행 및 검증

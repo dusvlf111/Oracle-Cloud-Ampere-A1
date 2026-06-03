@@ -89,6 +89,51 @@ def _verify_sync(config: dict) -> None:
     client.list_availability_domains(compartment_id=config["tenancy"])
 
 
+def build_launch_details(cfg, compartment_id: str):
+    """Build a ``LaunchInstanceDetails`` from an instance config (skill: oci-sdk).
+
+    ``cfg`` is any object exposing the InstanceConfig launch fields. Imported
+    lazily so the heavyweight ``oci.core.models`` is only loaded when a launch
+    actually happens (keeps test import cost low).
+    """
+    from oci.core.models import (
+        CreateVnicDetails,
+        LaunchInstanceDetails,
+        LaunchInstanceShapeConfigDetails,
+    )
+
+    return LaunchInstanceDetails(
+        availability_domain=cfg.availability_domain,
+        compartment_id=compartment_id,
+        display_name=cfg.name,
+        shape=cfg.shape,
+        shape_config=LaunchInstanceShapeConfigDetails(
+            ocpus=cfg.ocpus,
+            memory_in_gbs=cfg.memory_gb,
+        ),
+        image_id=cfg.image_ocid,
+        subnet_id=cfg.subnet_ocid,
+        create_vnic_details=CreateVnicDetails(
+            subnet_id=cfg.subnet_ocid,
+            assign_public_ip=True,
+        ),
+        metadata={"ssh_authorized_keys": cfg.ssh_public_key},
+    )
+
+
+def launch_instance_sync(config: dict, details) -> str:
+    """Blocking ``ComputeClient.launch_instance`` → returns the instance OCID.
+
+    Runs inside ``asyncio.to_thread`` from the worker. Raises on failure so the
+    caller can :func:`classify_error` the exception.
+    """
+    from oci.core import ComputeClient
+
+    client = ComputeClient(config)
+    response = client.launch_instance(details)
+    return response.data.id
+
+
 async def verify(
     cred: dict,
     *,
