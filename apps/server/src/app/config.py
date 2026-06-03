@@ -28,10 +28,11 @@ class Settings(BaseSettings):
     # Filesystem — OCI private keys stored here, chmod 600 (PRD §7.1, §9.1).
     keys_dir: str = "/data/keys"
 
-    # Security
+    # Security — APP_SECRET signs the session cookie and derives the AES-256-GCM
+    # key (required). Admin credentials are NOT env-based: they live in the
+    # AppSetting table (admin_username / admin_password_hash), created via the
+    # first-signup flow (POST /api/auth/setup). See PRD §7.7.
     app_secret: str = ""
-    app_username: str = "admin"
-    app_password_hash: str = ""
     cors_origins: str = "http://localhost:3000"
     # Session cookie Secure flag — enable in production (HTTPS). PRD §7.7.2.
     session_secure: bool = False

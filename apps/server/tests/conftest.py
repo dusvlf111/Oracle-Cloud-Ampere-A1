@@ -11,12 +11,12 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel
 
 import app.db.models as _models  # noqa: F401  (register tables on metadata)
-from app.config import Settings
 from app.db.session import create_db_engine
 from app.main import app
 from app.services import auth as _auth
 
-# Known single-admin pair used across auth tests.
+# Known single-admin pair used across auth tests. Password is >= 8 chars so it
+# also satisfies the setup-flow validation rules.
 TEST_USERNAME = "admin"
 TEST_PASSWORD = "test-admin-pw"
 
@@ -41,19 +41,19 @@ async def client() -> AsyncClient:
 
 
 @pytest.fixture
-def admin_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
-    """Configure the single-admin credentials for auth tests (call-time)."""
-    settings = Settings(
-        app_username=TEST_USERNAME,
-        app_password_hash=_auth.hash_password(TEST_PASSWORD),
-        app_secret="x" * 32,
-    )
-    monkeypatch.setattr("app.services.auth.get_settings", lambda: settings)
-    return settings
+def admin_settings(engine, db_app) -> None:
+    """Seed the single admin in the test DB (DB-based auth).
+
+    Activates the in-memory ``get_session`` override (via ``db_app``) and
+    persists the admin credentials so ``/api/auth/login`` succeeds. Replaces the
+    former env-based credential fixture.
+    """
+    with Session(engine) as s:
+        _auth.create_admin(s, TEST_USERNAME, TEST_PASSWORD)
 
 
 @pytest_asyncio.fixture
-async def authed_client(admin_settings: Settings) -> AsyncClient:
+async def authed_client(admin_settings) -> AsyncClient:
     """AsyncClient that has logged in and carries the session cookie."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -124,7 +124,7 @@ def oci_mock(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest_asyncio.fixture
-async def authed_db_client(admin_settings, db_app) -> AsyncClient:
+async def authed_db_client(admin_settings) -> AsyncClient:
     """Logged-in AsyncClient whose log routes hit the in-memory test DB."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

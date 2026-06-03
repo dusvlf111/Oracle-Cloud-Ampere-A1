@@ -17,8 +17,6 @@ def cred_settings(tmp_path, monkeypatch: pytest.MonkeyPatch) -> Settings:
     """Wire up keys_dir + app_secret across the modules that read settings."""
     keys = tmp_path / "keys"
     settings = Settings(
-        app_username="admin",
-        app_password_hash="",  # filled by admin_settings via services.auth
         app_secret="api-test-secret",
         keys_dir=str(keys),
     )

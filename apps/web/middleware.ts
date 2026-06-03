@@ -27,6 +27,10 @@ export function middleware(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Exclude Next internals, static files and the proxied API from the guard.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
+  // Exclude Next internals, static files, the proxied API and PWA assets
+  // (manifest/service worker/icons must be fetchable WITHOUT a session, or
+  // install + offline registration breaks on the login screen).
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api|manifest.webmanifest|sw.js|icons/).*)",
+  ],
 };

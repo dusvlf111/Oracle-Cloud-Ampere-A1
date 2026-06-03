@@ -39,8 +39,11 @@ describe("next.config Serwist integration", () => {
     expect(rules![0].source).toBe("/api/:path*");
   });
 
-  it("keeps standalone output and FSD-safe page extensions", () => {
+  it("keeps standalone output and DEFAULT pageExtensions", () => {
     expect(config.output).toBe("standalone");
-    expect(config.pageExtensions).toEqual(["tsx", "jsx"]);
+    // Regression guard: pageExtensions must NOT be narrowed (e.g. to tsx/jsx).
+    // A narrowed list silently excludes `middleware.ts` (login redirect) and
+    // `app/manifest.ts` (PWA manifest) from the production build.
+    expect(config.pageExtensions).toBeUndefined();
   });
 });

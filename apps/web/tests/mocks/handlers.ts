@@ -12,6 +12,11 @@ const API = "http://localhost:3000/api";
 export const handlers = [
   http.get("/api/healthz", () => HttpResponse.json({ status: "ok" })),
 
+  // Default: admin already exists → login form. Setup tests override this.
+  http.get(`${API}/auth/setup`, () =>
+    HttpResponse.json({ needs_setup: false }),
+  ),
+
   http.get(`${API}/credentials`, () => HttpResponse.json([])),
   http.get(`${API}/configs`, () => HttpResponse.json([])),
   http.get(`${API}/channels`, () => HttpResponse.json([])),
