@@ -67,6 +67,11 @@ docker compose up -d
 | pytest, pytest-asyncio, pytest-cov, pytest-httpx | 테스트 | MIT |
 | polyfactory | 테스트 팩토리 | MIT |
 | httpx | 비동기/동기 HTTP 클라이언트 (ASGITransport) | BSD-3 |
+| argon2-cffi | Argon2id 비밀번호 해시 (OWASP 권장) | MIT |
+| typer | CLI 헬퍼 (`python -m app.cli hash`) | MIT |
+| itsdangerous | 세션 쿠키 서명 (SessionMiddleware) | BSD-3 |
+| slowapi | 로그인 rate limit (메모리 backend) | MIT |
+| python-ulid | 요청 ID (ULID) 부여 | MIT |
 
 ### Web (Node, pnpm)
 
@@ -76,6 +81,9 @@ docker compose up -d
 | @tanstack/react-query | 데이터 페칭/캐싱 | MIT |
 | tailwindcss, @tailwindcss/postcss | 스타일 (v4) | MIT |
 | clsx, tailwind-merge, lucide-react | shadcn/ui 유틸/아이콘 | MIT |
+| react-hook-form | 폼 상태 관리 | MIT |
+| zod | 런타임 스키마 검증 (폼/에러 파싱) | MIT |
+| @hookform/resolvers | react-hook-form ↔ zod 연결 | MIT |
 | eslint, typescript-eslint, eslint-config-next | 린트 | MIT |
 | eslint-plugin-boundaries, eslint-plugin-import, eslint-import-resolver-typescript | FSD 레이어 규칙 강제 | MIT |
 | vitest, @vitejs/plugin-react, jsdom | 테스트 러너 | MIT |
