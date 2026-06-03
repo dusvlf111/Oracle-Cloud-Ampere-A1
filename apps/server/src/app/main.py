@@ -31,6 +31,7 @@ from app.db.session import get_engine
 from app.log_bus import attach_log_bus, log_bus
 from app.logging_config import configure_logging
 from app.workers.log_pruner import run_log_pruner
+from app.workers.poller import poller_supervisor
 
 
 @asynccontextmanager
@@ -45,14 +46,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging(engine=engine)
     attach_log_bus(level=db_level)
     log_bus.bind_loop()
-    # Log retention worker (PRD §9.3.8); the full poller supervisor lands in Push 5.
+    # Background workers (PRD §7.3.1, §9.3.8): poller supervisor manages a
+    # per-config polling task; log_pruner enforces retention.
     pruner_task = asyncio.create_task(run_log_pruner(engine))
+    poller_task = asyncio.create_task(poller_supervisor(engine))
     try:
         yield
     finally:
-        pruner_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await pruner_task
+        # Graceful shutdown — cancel and await both, swallowing CancelledError
+        # so child config tasks unwind cleanly (PRD §7.3.1).
+        for task in (poller_task, pruner_task):
+            task.cancel()
+        for task in (poller_task, pruner_task):
+            with suppress(asyncio.CancelledError):
+                await task
 
 
 app = FastAPI(title="OCI Ampere A1 Auto-Provisioner", lifespan=lifespan)

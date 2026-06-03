@@ -48,9 +48,9 @@
     - [x] 6.2 에러 처리 + 알림 연동 — 429 → tenacity 지수 백오프 + `rate_limited` 기록 + sleep 연장, 인증/권한 오류 → `auth_error` + `enabled=False` + 인증 오류 알림 (priority 4) + 종료, 성공 시 연결된 모든 채널 `asyncio.gather(..., return_exceptions=True)` 병렬 발송 (priority 5), `OutOfCapacity` 는 무알림 (PRD §7.5.3)
         - [x] 6.2.T1 pytest 테스트 작성 — 429 백오프 동작, auth_error 시 비활성화+알림 mock 호출 검증, 성공 시 다중 채널 병렬 발송 (1개 채널 실패해도 나머지 발송), out_of_capacity 무알림
         - [x] 6.2.T2 `pytest -q tests/unit/workers/` 실행 및 검증
-    - [ ] 6.3 poller supervisor + lifespan — `workers/poller.py` (10초 주기 `enabled=True` 목록 vs 실행 중 task diff → spawn/cancel, config 수정 감지 시 재시작), `main.py` lifespan 에서 `asyncio.create_task(poller_supervisor())` + log_pruner 기동, shutdown 시 전체 graceful cancel (`asyncio.wait` + `CancelledError` 전파)
-        - [ ] 6.3.T1 pytest 테스트 작성 — `tests/integration/test_poller_supervisor.py` (toggle on → task spawn, toggle off → cancel, config 수정 → 재시작, shutdown graceful 종료, 다중 계정 + 다중 config 동시 폴링 시나리오)
-        - [ ] 6.3.T2 `pytest -q tests/integration/test_poller_supervisor.py` 실행 및 검증
+    - [x] 6.3 poller supervisor + lifespan — `workers/poller.py` (10초 주기 `enabled=True` 목록 vs 실행 중 task diff → spawn/cancel, config 수정 감지 시 재시작), `main.py` lifespan 에서 `asyncio.create_task(poller_supervisor())` + log_pruner 기동, shutdown 시 전체 graceful cancel (`asyncio.wait` + `CancelledError` 전파)
+        - [x] 6.3.T1 pytest 테스트 작성 — `tests/integration/test_poller_supervisor.py` (toggle on → task spawn, toggle off → cancel, config 수정 → 재시작, shutdown graceful 종료, 다중 계정 + 다중 config 동시 폴링 시나리오)
+        - [x] 6.3.T2 `pytest -q tests/integration/test_poller_supervisor.py` 실행 및 검증
     - [ ] 6.4 web: 시도 이력 — `entities/attempt` (상태 배지: success/out_of_capacity/rate_limited/auth_error/other_error, duration 표시), 최근 50개 시도 테이블 (`@tanstack/react-table`, 설정별/상태별 필터, `refetchInterval` 5초)
         - [ ] 6.4.T1 vitest 테스트 작성 — 상태별 배지 렌더, 테이블 필터 동작 (MSW: config_id/status 쿼리 검증)
         - [ ] 6.4.T2 `pnpm --filter web vitest run src/entities/attempt` 실행 및 검증
