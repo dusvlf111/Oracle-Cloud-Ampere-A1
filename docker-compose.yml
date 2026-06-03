@@ -1,0 +1,42 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    # NOTE: no `ports:` — the API server is NOT exposed to the host.
+    # Only the `web` service (same compose network) can reach it.
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: sqlite:////data/app.db
+      APP_SECRET: ${APP_SECRET}
+      APP_USERNAME: ${APP_USERNAME}
+      APP_PASSWORD_HASH: ${APP_PASSWORD_HASH}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      OCI_MAX_CONCURRENT: ${OCI_MAX_CONCURRENT:-10}
+      OCI_PER_CREDENTIAL_MAX: ${OCI_PER_CREDENTIAL_MAX:-1}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_LEVEL_DB: ${LOG_LEVEL_DB:-INFO}
+      LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-7}
+      LOG_RETENTION_ROWS: ${LOG_RETENTION_ROWS:-10000}
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"   # the only host-exposed port
+    environment:
+      INTERNAL_API_URL: http://server:8000   # used by Next.js rewrites (server-side only)
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped

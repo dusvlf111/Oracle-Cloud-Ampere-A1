@@ -9,10 +9,10 @@
   },
   "scripts": {
     "dev:web": "pnpm --filter web dev",
-    "dev:server": "cd apps/server && uvicorn app.main:app --reload --port 8000",
+    "dev:server": "cd apps/server && uv run uvicorn app.main:app --reload --port 8000",
     "gen:api": "pnpm --filter web gen:api",
     "test:web": "pnpm --filter web test",
-    "test:server": "cd apps/server && pytest -q --cov=app --cov-report=term-missing",
+    "test:server": "cd apps/server && uv run pytest -q --cov=app --cov-report=term-missing",
     "test": "pnpm test:server && pnpm test:web",
     "lint": "pnpm --filter web lint",
     "build": "pnpm --filter web build"
