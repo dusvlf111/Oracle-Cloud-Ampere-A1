@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev:web": "pnpm --filter web dev",
-    "dev:server": "cd apps/server && uv run uvicorn app.main:app --reload --port 8000",
+    "dev:server": "mkdir -p data/keys && uv --project apps/server run --env-file .env alembic -c apps/server/alembic.ini upgrade head && uv --project apps/server run --env-file .env uvicorn app.main:app --app-dir apps/server/src --reload --port 8000",
     "gen:api": "pnpm --filter web gen:api",
     "test:web": "pnpm --filter web test",
     "test:server": "cd apps/server && uv run pytest -q --cov=app --cov-report=term-missing",
