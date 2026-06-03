@@ -45,9 +45,9 @@
     - [x] 3.1 `LogEntry` 모델 + Alembic 마이그레이션 — timestamp/level/logger 인덱스, `config_id`/`attempt_id`/`credential_id`/`extra`/`exc_info` 컨텍스트 컬럼 (PRD §6)
         - [x] 3.1.T1 pytest 테스트 작성 — `tests/unit/db/test_log_entry.py` (생성/인덱스 컬럼 조회), 마이그레이션 up/down 검증
         - [x] 3.1.T2 `pytest -q tests/unit/db/` + `alembic upgrade head` 실행 및 검증
-    - [ ] 3.2 `JsonFormatter` + `DbLogHandler` + 로깅 부트스트랩 — `logging_config.py` (stdout JSON 핸들러, DB 동기 INSERT 핸들러, `record.__dict__` 에서 컨텍스트 키 추출, 재귀 방지 필터, `emit()` 예외 격리 `handleError`, 라이브러리 로거 WARNING, env `LOG_LEVEL`/`LOG_LEVEL_DB`)
-        - [ ] 3.2.T1 pytest 테스트 작성 — `tests/unit/test_logging.py` (JSON 출력 스키마, `extra` 컨텍스트 → LogEntry 컬럼 매핑, ERROR 시 exc_info 저장, DB 장애 시 앱 영향 없음, sqlalchemy 로그 재귀 차단)
-        - [ ] 3.2.T2 `pytest -q tests/unit/test_logging.py` 실행 및 검증
+    - [x] 3.2 `JsonFormatter` + `DbLogHandler` + 로깅 부트스트랩 — `logging_config.py` (stdout JSON 핸들러, DB 동기 INSERT 핸들러, `record.__dict__` 에서 컨텍스트 키 추출, 재귀 방지 필터, `emit()` 예외 격리 `handleError`, 라이브러리 로거 WARNING, env `LOG_LEVEL`/`LOG_LEVEL_DB`)
+        - [x] 3.2.T1 pytest 테스트 작성 — `tests/unit/test_logging.py` (JSON 출력 스키마, `extra` 컨텍스트 → LogEntry 컬럼 매핑, ERROR 시 exc_info 저장, DB 장애 시 앱 영향 없음, sqlalchemy 로그 재귀 차단)
+        - [x] 3.2.T2 `pytest -q tests/unit/test_logging.py` 실행 및 검증
     - [ ] 3.3 `LogBus` + `LogBusHandler` — `log_bus.py` (subscribe 컨텍스트매니저, `put_nowait` + QueueFull 드롭, maxsize 500), 핸들러가 `publish()` 호출, 루트 로거에 3핸들러 부착
         - [ ] 3.3.T1 pytest 테스트 작성 — `tests/unit/test_log_bus.py` (구독자 수신, 다중 구독자, 가득 찬 큐 드롭, 구독 해제 후 미수신)
         - [ ] 3.3.T2 `pytest -q tests/unit/test_log_bus.py` 실행 및 검증
