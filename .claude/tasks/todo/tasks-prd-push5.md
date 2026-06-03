@@ -48,9 +48,9 @@
     - [x] 5.1 Orval 클라이언트 셋업 — `orval.config.ts` (tags-split, react-query client, `shared/http` mutator), `pnpm gen:api` 스크립트, 생성물 `shared/api/` gitignore, 도메인 MSW 핸들러 베이스 (`tests/mocks/handlers.ts`: credentials/configs/channels/attempts)
         - [x] 5.1.T1 vitest 테스트 작성 — 생성된 훅 smoke 테스트 (`useGetCredentials` 가 MSW 응답을 반환, 표준 에러 응답 파싱)
         - [x] 5.1.T2 서버 기동 후 `pnpm gen:api` 성공 + `pnpm --filter web tsc --noEmit` + `pnpm --filter web test` 실행 및 검증
-    - [ ] 5.2 엔티티 3종 — `entities/credential` (목록 카드, 마스킹 표시), `entities/config` (목록 행, enabled 배지), `entities/channel` (타입 아이콘, 마스킹 config 표시) — 각 slice `{ui,model,api,index.ts}`
-        - [ ] 5.2.T1 vitest 테스트 작성 — 엔티티별 렌더 테스트 (마스킹 값 표시, enabled/disabled 상태, 타입별 아이콘)
-        - [ ] 5.2.T2 `pnpm --filter web vitest run src/entities` 실행 및 검증
+    - [x] 5.2 엔티티 3종 — `entities/credential` (목록 카드, 마스킹 표시), `entities/config` (목록 행, enabled 배지), `entities/channel` (타입 아이콘, 마스킹 config 표시) — 각 slice `{ui,model,api,index.ts}`
+        - [x] 5.2.T1 vitest 테스트 작성 — 엔티티별 렌더 테스트 (마스킹 값 표시, enabled/disabled 상태, 타입별 아이콘)
+        - [x] 5.2.T2 `pnpm --filter web vitest run src/entities` 실행 및 검증
     - [ ] 5.3 자격증명 페이지 — `features/credential-verify` (검증 버튼 → `{ok,error}` 토스트), 자격증명 생성 폼 (multipart: private key 파일 업로드, react-hook-form + zod), 삭제 확인, `pages/credentials` 조합 + 라우트
         - [ ] 5.3.T1 vitest 테스트 작성 — 생성 폼 제출 (파일 포함 FormData, MSW 검증), verify 성공/실패 토스트, 삭제 흐름 (user-event 시나리오)
         - [ ] 5.3.T2 `pnpm --filter web vitest run src/features/credential-verify src/pages/credentials` 실행 및 검증
