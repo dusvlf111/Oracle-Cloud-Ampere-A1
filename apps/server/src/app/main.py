@@ -14,16 +14,30 @@ from fastapi import FastAPI
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.sessions import SessionMiddleware
 
+import logging
+
 from app.api import auth as auth_api
 from app.api.deps import RequestIdMiddleware
 from app.api.errors import rate_limit_handler, register_error_handlers
 from app.api.ratelimit import limiter
 from app.config import get_settings
+from app.db.session import get_engine
+from app.log_bus import attach_log_bus, log_bus
+from app.logging_config import configure_logging
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    # Startup: background worker supervisor will be spawned here (Push 5).
+    # Startup: install the three log sinks (stdout JSON + DB + in-memory bus)
+    # on the root logger and bind the bus to the running event loop so the
+    # synchronous handlers can marshal records onto it (PRD §9.3).
+    settings = get_settings()
+    db_level_name = (settings.log_level_db or settings.log_level).upper()
+    db_level = getattr(logging, db_level_name, logging.INFO)
+    configure_logging(engine=get_engine())
+    attach_log_bus(level=db_level)
+    log_bus.bind_loop()
+    # Background worker supervisor (incl. log_pruner) will be spawned here (Push 5).
     yield
     # Shutdown: graceful cancellation of worker tasks will go here.
 

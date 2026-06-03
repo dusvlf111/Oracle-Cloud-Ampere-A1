@@ -48,9 +48,9 @@
     - [x] 3.2 `JsonFormatter` + `DbLogHandler` + 로깅 부트스트랩 — `logging_config.py` (stdout JSON 핸들러, DB 동기 INSERT 핸들러, `record.__dict__` 에서 컨텍스트 키 추출, 재귀 방지 필터, `emit()` 예외 격리 `handleError`, 라이브러리 로거 WARNING, env `LOG_LEVEL`/`LOG_LEVEL_DB`)
         - [x] 3.2.T1 pytest 테스트 작성 — `tests/unit/test_logging.py` (JSON 출력 스키마, `extra` 컨텍스트 → LogEntry 컬럼 매핑, ERROR 시 exc_info 저장, DB 장애 시 앱 영향 없음, sqlalchemy 로그 재귀 차단)
         - [x] 3.2.T2 `pytest -q tests/unit/test_logging.py` 실행 및 검증
-    - [ ] 3.3 `LogBus` + `LogBusHandler` — `log_bus.py` (subscribe 컨텍스트매니저, `put_nowait` + QueueFull 드롭, maxsize 500), 핸들러가 `publish()` 호출, 루트 로거에 3핸들러 부착
-        - [ ] 3.3.T1 pytest 테스트 작성 — `tests/unit/test_log_bus.py` (구독자 수신, 다중 구독자, 가득 찬 큐 드롭, 구독 해제 후 미수신)
-        - [ ] 3.3.T2 `pytest -q tests/unit/test_log_bus.py` 실행 및 검증
+    - [x] 3.3 `LogBus` + `LogBusHandler` — `log_bus.py` (subscribe 컨텍스트매니저, `put_nowait` + QueueFull 드롭, maxsize 500), 핸들러가 `publish()` 호출, 루트 로거에 3핸들러 부착
+        - [x] 3.3.T1 pytest 테스트 작성 — `tests/unit/test_log_bus.py` (구독자 수신, 다중 구독자, 가득 찬 큐 드롭, 구독 해제 후 미수신)
+        - [x] 3.3.T2 `pytest -q tests/unit/test_log_bus.py` 실행 및 검증
     - [ ] 3.4 로그 조회/삭제 API — `GET /api/logs` (levels 멀티/logger prefix/config_id/since/until/q LIKE/limit + base64 cursor 페이지네이션 → `LogPage{items, next_cursor, has_more}`), `DELETE /api/logs?before=<iso>` 204 (PRD §8)
         - [ ] 3.4.T1 pytest 테스트 작성 — `tests/api/test_logs.py` (필터 조합, 커서 연속 조회, 검색, 삭제 후 미조회, 미인증 401)
         - [ ] 3.4.T2 `pytest -q tests/api/test_logs.py` 실행 및 검증
