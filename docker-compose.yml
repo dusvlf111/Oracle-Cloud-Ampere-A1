@@ -8,10 +8,9 @@ services:
     expose:
       - "8000"
     environment:
-      # Default: SQLite on the /data volume. To use PostgreSQL instead, start
-      # the postgres profile and set DATABASE_URL in .env, e.g.:
-      #   docker compose --profile postgres up -d
-      #   DATABASE_URL=postgresql+psycopg://oci:oci@postgres:5432/oci
+      # Default: SQLite on the /data volume (simple mode).
+      # Full mode (PostgreSQL + Redis) is enabled by the override file:
+      #   docker compose -f docker-compose.yml -f docker-compose.full.yml up -d
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/app.db}
       APP_SECRET: ${APP_SECRET}
       APP_USERNAME: ${APP_USERNAME}
@@ -27,7 +26,7 @@ services:
       DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
       DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
       DB_POOL_PRE_PING: ${DB_POOL_PRE_PING:-true}
-      # Redis rate-limit storage (empty = in-memory). See redis profile below.
+      # Redis rate-limit storage (empty = in-memory; full mode wires redis).
       REDIS_URL: ${REDIS_URL:-}
     volumes:
       - ./data:/data
@@ -50,39 +49,3 @@ services:
       server:
         condition: service_healthy
     restart: unless-stopped
-
-  # --- Optional PostgreSQL (profile: postgres) ---------------------------
-  # Enable with `docker compose --profile postgres up -d` and set in .env:
-  #   DATABASE_URL=postgresql+psycopg://oci:oci@postgres:5432/oci
-  postgres:
-    image: postgres:16-alpine
-    profiles: ["postgres"]
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-oci}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oci}
-      POSTGRES_DB: ${POSTGRES_DB:-oci}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-oci} -d ${POSTGRES_DB:-oci}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # --- Optional Redis (profile: redis) -----------------------------------
-  # Enable with `docker compose --profile redis up -d` and set in .env:
-  #   REDIS_URL=redis://redis:6379/0
-  # When REDIS_URL is unset the server keeps the in-memory rate-limit store.
-  redis:
-    image: redis:7-alpine
-    profiles: ["redis"]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
-volumes:
-  postgres-data:

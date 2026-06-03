@@ -31,7 +31,7 @@ apps/web/src/shared/api/
 .claude/.task-running
 
 # OpenAPI extraction artifact (Orval input)
-apps/server/openapi.json
+# apps/server/openapi.json is COMMITTED (Orval snapshot for Docker builds / fresh clones)
 apps/server/openapi.err
 .history
 

@@ -37,7 +37,13 @@ pnpm build
 ## 실행 방법
 
 기본 동작은 **무설정** 이다 — SQLite + 인메모리 로그인 rate limit. PostgreSQL/Redis 는
-`.env` + compose 프로필로 켜는 **옵션**이다 (미설정 시 외부 서비스 의존 없음).
+**풀 모드 오버라이드** (`docker-compose.full.yml`) 또는 `.env` 로 켜는 **옵션**이다
+(미설정 시 외부 서비스 의존 없음).
+
+> **자동 동기화**: `dev:server`/Docker 서버 기동은 `alembic upgrade head` 를 선행하고,
+> `dev:web`/웹 빌드는 `scripts/sync-api.mjs` 가 OpenAPI → Orval 클라이언트를 자동
+> 재생성한다 (스키마 미변경 시 생략, uv 없는 환경은 커밋된 `apps/server/openapi.json`
+> 스냅샷 사용). 수동 실행: `pnpm gen:api`.
 
 ### ① 로컬 dev (uv + pnpm 듀얼 기동)
 
@@ -50,50 +56,44 @@ cp .env.example .env
 #  - 로컬 dev 는 DATABASE_URL=sqlite:///./data/app.db, KEYS_DIR=./data/keys 권장
 
 pnpm dev:server   # data/keys 준비 → alembic upgrade head → uvicorn :8000 (.env 자동 로드)
-pnpm dev:web      # Next.js :3000 (브라우저는 /api 만 호출 → rewrites 로 :8000 프록시)
+pnpm dev:web      # sync-api(Orval 자동 재생성) → Next.js :3000 (/api 는 rewrites 로 :8000 프록시)
 ```
 
-`dev:server` 는 기동 전 `alembic upgrade head` 를 선행하므로 스키마가 항상 최신이다.
-(lifespan 의 스키마 가드가 미적용 DB 면 명확한 오류로 즉시 중단한다.)
-
-### ② Docker (기본 — SQLite)
+### ② Docker — 간단 모드 (SQLite, 기본)
 
 ```bash
 cp .env.example .env   # APP_SECRET / APP_PASSWORD_HASH 채우기
-docker compose up -d
+docker compose up -d   # 또는 pnpm compose:up
 ```
 
 `web` 만 호스트 `3000` 에 노출되고 `server` 는 compose 네트워크 내부 전용이다.
 DB 는 `./data` 볼륨의 SQLite 이며 컨테이너 재시작 시 lifespan 이 폴링 supervisor 를
-다시 기동한다(아래 ⑤).
+다시 기동한다(아래 ⑤). 서버 컨테이너는 시작 시 `alembic upgrade head` 를 자동 수행한다.
 
-### ③ PostgreSQL 전환 (선택)
-
-```bash
-# .env 에 활성화
-DATABASE_URL=postgresql+psycopg://oci:oci@postgres:5432/oci
-POSTGRES_USER=oci
-POSTGRES_PASSWORD=oci
-POSTGRES_DB=oci
-# (선택) DB_POOL_SIZE / DB_MAX_OVERFLOW / DB_POOL_PRE_PING
-
-docker compose --profile postgres up -d
-# 최초 1회 마이그레이션
-docker compose --profile postgres exec server alembic upgrade head
-```
-
-SQLite WAL 대신 SQLAlchemy 커넥션 풀이 적용된다(`db/session.py` 의 dialect 분기).
-
-### ④ Redis 전환 (선택 — 로그인 rate limit 공유 저장소)
+### ③ Docker — 풀 모드 (PostgreSQL + Redis 동봉 호스팅)
 
 ```bash
-# .env 에 활성화
-REDIS_URL=redis://redis:6379/0
-
-docker compose --profile redis up -d        # PostgreSQL 과 동시: --profile postgres --profile redis
+docker compose -f docker-compose.yml -f docker-compose.full.yml up -d
+# 또는 pnpm compose:full
+# 또는 .env 에 COMPOSE_FILE=docker-compose.yml:docker-compose.full.yml 지정 후 docker compose up -d
 ```
 
-`REDIS_URL` 이 비어 있으면 기존 인메모리 저장소를 그대로 쓴다(프로세스 단위).
+오버라이드가 PostgreSQL 16 + Redis 7 컨테이너를 띄우고 server 의
+`DATABASE_URL`/`REDIS_URL` 을 자동 연결한다 (둘 다 호스트 미노출 — 내부 네트워크 전용).
+`.env` 에 `DATABASE_URL`/`REDIS_URL` 을 직접 지정하면 외부 인스턴스로 우선 연결된다.
+계정 변경: `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`,
+풀 튜닝: `DB_POOL_SIZE`/`DB_MAX_OVERFLOW`/`DB_POOL_PRE_PING`.
+
+### ④ 외부 PostgreSQL/Redis 사용 (선택)
+
+```bash
+# .env 에만 지정하면 간단 모드 그대로 외부 서비스에 연결된다
+DATABASE_URL=postgresql+psycopg://user:pass@db.example.com:5432/oci
+REDIS_URL=redis://cache.example.com:6379/0
+```
+
+`REDIS_URL` 이 비어 있으면 인메모리 rate limit 저장소를 쓴다(프로세스 단위).
+SQLite 가 아니면 SQLAlchemy 커넥션 풀이 적용된다(`db/session.py` dialect 분기).
 
 ### ⑤ 재시작 자동 재개 동작
 

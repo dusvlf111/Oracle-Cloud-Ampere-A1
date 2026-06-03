@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "gen:api": "orval --config ./orval.config.ts"
+    "gen:api": "node ../../scripts/sync-api.mjs",
+    "predev": "node ../../scripts/sync-api.mjs",
+    "prebuild": "node ../../scripts/sync-api.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
