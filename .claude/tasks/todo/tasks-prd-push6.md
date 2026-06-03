@@ -51,9 +51,9 @@
     - [x] 6.3 poller supervisor + lifespan — `workers/poller.py` (10초 주기 `enabled=True` 목록 vs 실행 중 task diff → spawn/cancel, config 수정 감지 시 재시작), `main.py` lifespan 에서 `asyncio.create_task(poller_supervisor())` + log_pruner 기동, shutdown 시 전체 graceful cancel (`asyncio.wait` + `CancelledError` 전파)
         - [x] 6.3.T1 pytest 테스트 작성 — `tests/integration/test_poller_supervisor.py` (toggle on → task spawn, toggle off → cancel, config 수정 → 재시작, shutdown graceful 종료, 다중 계정 + 다중 config 동시 폴링 시나리오)
         - [x] 6.3.T2 `pytest -q tests/integration/test_poller_supervisor.py` 실행 및 검증
-    - [ ] 6.4 web: 시도 이력 — `entities/attempt` (상태 배지: success/out_of_capacity/rate_limited/auth_error/other_error, duration 표시), 최근 50개 시도 테이블 (`@tanstack/react-table`, 설정별/상태별 필터, `refetchInterval` 5초)
-        - [ ] 6.4.T1 vitest 테스트 작성 — 상태별 배지 렌더, 테이블 필터 동작 (MSW: config_id/status 쿼리 검증)
-        - [ ] 6.4.T2 `pnpm --filter web vitest run src/entities/attempt` 실행 및 검증
+    - [x] 6.4 web: 시도 이력 — `entities/attempt` (상태 배지: success/out_of_capacity/rate_limited/auth_error/other_error, duration 표시), 최근 50개 시도 테이블 (`@tanstack/react-table`, 설정별/상태별 필터, `refetchInterval` 5초)
+        - [x] 6.4.T1 vitest 테스트 작성 — 상태별 배지 렌더, 테이블 필터 동작 (MSW: config_id/status 쿼리 검증)
+        - [x] 6.4.T2 `pnpm --filter web vitest run src/entities/attempt` 실행 및 검증
     - [ ] 6.5 web: 대시보드 페이지 — `pages/dashboard` (활성/비활성 설정 카운트 카드, 시도 이력 테이블 위젯, 성공 인스턴스 정보 카드: OCID/생성 시각), `widgets/{header,sidebar}` 네비게이션 (로그아웃 포함), `app/(protected)/page.tsx`
         - [ ] 6.5.T1 vitest 테스트 작성 — 대시보드 통합 테스트 (MSW: 카운트 집계 표시, 성공 인스턴스 카드 렌더), 사이드바 네비게이션 링크
         - [ ] 6.5.T2 `pnpm --filter web test` 실행 및 검증
