@@ -51,9 +51,9 @@
     - [x] 5.2 엔티티 3종 — `entities/credential` (목록 카드, 마스킹 표시), `entities/config` (목록 행, enabled 배지), `entities/channel` (타입 아이콘, 마스킹 config 표시) — 각 slice `{ui,model,api,index.ts}`
         - [x] 5.2.T1 vitest 테스트 작성 — 엔티티별 렌더 테스트 (마스킹 값 표시, enabled/disabled 상태, 타입별 아이콘)
         - [x] 5.2.T2 `pnpm --filter web vitest run src/entities` 실행 및 검증
-    - [ ] 5.3 자격증명 페이지 — `features/credential-verify` (검증 버튼 → `{ok,error}` 토스트), 자격증명 생성 폼 (multipart: private key 파일 업로드, react-hook-form + zod), 삭제 확인, `pages/credentials` 조합 + 라우트
-        - [ ] 5.3.T1 vitest 테스트 작성 — 생성 폼 제출 (파일 포함 FormData, MSW 검증), verify 성공/실패 토스트, 삭제 흐름 (user-event 시나리오)
-        - [ ] 5.3.T2 `pnpm --filter web vitest run src/features/credential-verify src/pages/credentials` 실행 및 검증
+    - [x] 5.3 자격증명 페이지 — `features/credential-verify` (검증 버튼 → `{ok,error}` 토스트), 자격증명 생성 폼 (multipart: private key 파일 업로드, react-hook-form + zod), 삭제 확인, `pages/credentials` 조합 + 라우트
+        - [x] 5.3.T1 vitest 테스트 작성 — 생성 폼 제출 (파일 포함 FormData, MSW 검증), verify 성공/실패 토스트, 삭제 흐름 (user-event 시나리오)
+        - [x] 5.3.T2 `pnpm --filter web vitest run src/features/credential-verify src/pages/credentials` 실행 및 검증
     - [ ] 5.4 알림 채널 페이지 — 채널 CRUD 폼 (타입 선택 시 동적 필드: discord/slack webhook, telegram bot_token/chat_id, ntfy server_url/topic/token/priority/tags — zod discriminated union), `features/channel-test` (테스트 발송 버튼 → ok/error 결과 표시), `pages/channels` 조합 + 라우트
         - [ ] 5.4.T1 vitest 테스트 작성 — 타입 전환 시 폼 필드 변경, ntfy 채널 생성 제출 페이로드 검증, 테스트 발송 성공/실패 표시 (MSW)
         - [ ] 5.4.T2 `pnpm --filter web vitest run src/features/channel-test src/pages/channels` 실행 및 검증
