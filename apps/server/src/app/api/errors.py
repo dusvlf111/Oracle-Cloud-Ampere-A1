@@ -11,6 +11,7 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from slowapi.errors import RateLimitExceeded
 from starlette.responses import JSONResponse
 
 from app.api.deps import AppError, get_request_id
@@ -58,6 +59,20 @@ async def validation_error_handler(
         code="validation_error",
         message="Request validation failed",
         details={"errors": exc.errors()},
+        request_id=get_request_id(request),
+    )
+
+
+async def rate_limit_handler(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
+    # slowapi parses "5/minute" → 60s window. Surface retry hint in details.
+    retry_after = getattr(exc.limit.limit, "get_expiry", lambda: 60)()
+    return _envelope(
+        status_code=429,
+        code="rate_limited",
+        message="Too many login attempts",
+        details={"retry_after_sec": int(retry_after)},
         request_id=get_request_id(request),
     )
 

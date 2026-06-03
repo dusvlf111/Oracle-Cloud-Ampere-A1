@@ -11,11 +11,13 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import auth as auth_api
 from app.api.deps import RequestIdMiddleware
-from app.api.errors import register_error_handlers
+from app.api.errors import rate_limit_handler, register_error_handlers
+from app.api.ratelimit import limiter
 from app.config import get_settings
 
 
@@ -44,6 +46,10 @@ app.add_middleware(
 # Standard error envelope + request-id correlation (PRD §8).
 app.add_middleware(RequestIdMiddleware)
 register_error_handlers(app)
+
+# Login rate limiting (PRD §7.7.3).
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 # Routers.
 app.include_router(auth_api.router)

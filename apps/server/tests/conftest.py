@@ -21,6 +21,18 @@ TEST_USERNAME = "admin"
 TEST_PASSWORD = "test-admin-pw"
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limit() -> Iterator[None]:
+    """Isolate slowapi storage + failure tracker between tests."""
+    from app.api.ratelimit import failure_tracker, limiter
+
+    limiter.reset()
+    failure_tracker.reset()
+    yield
+    limiter.reset()
+    failure_tracker.reset()
+
+
 @pytest_asyncio.fixture
 async def client() -> AsyncClient:
     transport = ASGITransport(app=app)

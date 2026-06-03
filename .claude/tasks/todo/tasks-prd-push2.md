@@ -53,9 +53,9 @@
     - [x] 2.3 세션 + 인증 API — `SessionMiddleware` (itsdangerous, HTTP-only, SameSite=Lax, prod Secure), `api/auth.py` (`POST /api/auth/login`, `POST /api/auth/logout` 204, `GET /api/auth/me`), `deps.py` `require_login` (미인증 401 `unauthorized`), `/healthz`·`/api/auth/login` 만 공개
         - [x] 2.3.T1 pytest 테스트 작성 — `tests/api/test_auth.py` (정상 로그인→Set-Cookie→me 200, 잘못된 비밀번호 401, 로그아웃 후 me 401, 보호 엔드포인트 미인증 401), conftest 에 `authed_client` fixture 추가
         - [x] 2.3.T2 `pytest -q tests/api/test_auth.py` 실행 및 검증
-    - [ ] 2.4 무차별 대입 방어 — slowapi (IP 당 5회/분 → 429 `rate_limited` + `retry_after_sec`), 연속 실패 10회 → 5분 IP 차단 (in-memory), 로그인 시도(성공/실패) WARNING 로그
-        - [ ] 2.4.T1 pytest 테스트 작성 — `tests/api/test_auth_ratelimit.py` (6회째 429, 10회 실패 후 차단, 차단 해제 시간 mock)
-        - [ ] 2.4.T2 `pytest -q tests/api/test_auth_ratelimit.py` 실행 및 검증
+    - [x] 2.4 무차별 대입 방어 — slowapi (IP 당 5회/분 → 429 `rate_limited` + `retry_after_sec`), 연속 실패 10회 → 5분 IP 차단 (in-memory), 로그인 시도(성공/실패) WARNING 로그
+        - [x] 2.4.T1 pytest 테스트 작성 — `tests/api/test_auth_ratelimit.py` (6회째 429, 10회 실패 후 차단, 차단 해제 시간 mock)
+        - [x] 2.4.T2 `pytest -q tests/api/test_auth_ratelimit.py` 실행 및 검증
     - [ ] 2.5 web: 로그인 기능 — `shared/http` (fetch 래퍼, `credentials: 'include'`, 표준 에러 파싱), `features/auth-login` (react-hook-form + zod 폼, 401/429 에러 표시), `pages/login` + `app/login/page.tsx` 진입점
         - [ ] 2.5.T1 vitest 테스트 작성 — `features/auth-login/ui/LoginForm.test.tsx` (MSW: 성공 시 리다이렉트 콜백, 401 에러 메시지, 429 rate limit 메시지, zod 검증)
         - [ ] 2.5.T2 `pnpm --filter web vitest run src/features/auth-login` 실행 및 검증

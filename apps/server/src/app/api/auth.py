@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 
 from app.api.deps import AppError, require_login
+from app.api.ratelimit import LOGIN_RATE, client_key, failure_tracker, limiter
 from app.services.auth import authenticate
 
 logger = logging.getLogger("app.api.auth")
@@ -29,16 +30,17 @@ class UserResponse(BaseModel):
     username: str
 
 
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
-
-
 @router.post("/login", response_model=UserResponse)
+@limiter.limit(LOGIN_RATE)
 async def login(request: Request, body: LoginRequest) -> UserResponse:
-    ip = _client_ip(request)
+    ip = client_key(request)
+    # Reject early if this IP is in a temporary block window.
+    failure_tracker.check_blocked(ip)
     if not authenticate(body.username, body.password):
+        failure_tracker.record_failure(ip)
         logger.warning("Login FAILED for user=%s ip=%s", body.username, ip)
         raise AppError("unauthorized", 401, "Invalid credentials")
+    failure_tracker.record_success(ip)
     request.session["user"] = body.username
     logger.warning("Login OK for user=%s ip=%s", body.username, ip)
     return UserResponse(username=body.username)
