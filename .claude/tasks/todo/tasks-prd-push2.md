@@ -21,12 +21,32 @@
 
 ---
 
+### 에이전트 실행 전략 (push-lead)
+
+| 작업 | 담당 | 의존성 |
+|---|---|---|
+| 2.1 → 2.3 → 2.4 | `server-worker` | — (2.3 은 2.1 에러 표준 + 2.2 auth 서비스 필요) |
+| 2.2 | `server-worker` | — (2.1 과 독립, 같은 워커 내 선행 처리 가능) |
+| 2.5 → 2.6 | `web-worker` | — (MSW 모킹 기반이라 서버 완성 불필요, API 계약은 PRD §8 고정) |
+
+```
+[server-worker] 2.1 ──┬→ 2.3 → 2.4
+                2.2 ──┘
+[web-worker]    2.5 → 2.6          (server 체인과 병렬)
+```
+
+- **병렬**: server 체인(2.1~2.4) ∥ web 체인(2.5~2.6) — 웹은 MSW 핸들러로 PRD §8 계약 기준 개발
+- 각 T2 는 커밋 직전 `test-runner` 검증, Push 완료 시 통합 게이트 (Orval 미도입 단계 — `shared/http` 수동 타입)
+- 참조 스킬: `fastapi-patterns`, `python-testing` / `fsd-architecture`, `web-testing`
+
+---
+
 ## 작업
 
 - [ ] 2.0 단일 관리자 인증 (Push 2)
-    - [ ] 2.1 표준 에러 응답 인프라 — `AppError(code, status_code, message, details)` + 전역 exception handler (`{error: {code, message, details, request_id}}`), `RequestIdMiddleware` (ULID 부여 → `request.state` + `X-Request-Id` 헤더), `validation_error`/`internal_error` 핸들러 (PRD §8)
-        - [ ] 2.1.T1 pytest 테스트 작성 — `tests/api/test_errors.py` (AppError → JSON 스키마 검증, 422 변환, X-Request-Id 헤더 존재/로그 포함)
-        - [ ] 2.1.T2 `pytest -q tests/api/test_errors.py` 실행 및 검증
+    - [x] 2.1 표준 에러 응답 인프라 — `AppError(code, status_code, message, details)` + 전역 exception handler (`{error: {code, message, details, request_id}}`), `RequestIdMiddleware` (ULID 부여 → `request.state` + `X-Request-Id` 헤더), `validation_error`/`internal_error` 핸들러 (PRD §8)
+        - [x] 2.1.T1 pytest 테스트 작성 — `tests/api/test_errors.py` (AppError → JSON 스키마 검증, 422 변환, X-Request-Id 헤더 존재/로그 포함)
+        - [x] 2.1.T2 `pytest -q tests/api/test_errors.py` 실행 및 검증
     - [ ] 2.2 auth 서비스 + CLI 헬퍼 — `services/auth.py` (argon2-cffi 해시 검증, env `APP_USERNAME`/`APP_PASSWORD_HASH` 비교), `cli.py` (typer: `hash <password>` → Argon2id 해시 출력)
         - [ ] 2.2.T1 pytest 테스트 작성 — `tests/unit/services/test_auth.py` (해시 생성→검증 라운드트립, 불일치 거부), CLI 출력 형식 (`$argon2id$` prefix)
         - [ ] 2.2.T2 `pytest -q tests/unit/services/test_auth.py` 실행 및 검증

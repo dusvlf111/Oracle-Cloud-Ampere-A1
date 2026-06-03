@@ -12,6 +12,9 @@ from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
 
+from app.api.deps import RequestIdMiddleware
+from app.api.errors import register_error_handlers
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -21,6 +24,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="OCI Ampere A1 Auto-Provisioner", lifespan=lifespan)
+
+# Standard error envelope + request-id correlation (PRD §8).
+app.add_middleware(RequestIdMiddleware)
+register_error_handlers(app)
 
 
 @app.get("/healthz", tags=["meta"])
