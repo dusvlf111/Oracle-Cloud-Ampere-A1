@@ -20,12 +20,34 @@
 
 ---
 
+### 에이전트 실행 전략 (push-lead)
+
+전 작업 `web-worker` 담당. **선행 조건: Push 4 완료** (Orval 이 서버 `/openapi.json` 필요).
+
+| 작업 | 담당 | 의존성 |
+|---|---|---|
+| 5.1 | `web-worker` | Push 4 (서버 OpenAPI) |
+| 5.2 | `web-worker` | 5.1 (생성된 `shared/api` 타입) |
+| 5.3 ∥ 5.4 ∥ 5.5 | `web-worker` 최대 3개 병렬 spawn | 5.2 (slice 영역 비중첩: credentials / channels / configs) |
+
+```
+5.1 → 5.2 ──┬── [web-worker A] 5.3 (credentials)
+            ├── [web-worker B] 5.4 (channels)
+            └── [web-worker C] 5.5 (configs)
+```
+
+- **병렬 조건**: 5.3~5.5 는 FSD slice 가 완전 분리 — 공용 파일(`tests/mocks/handlers.ts`) 추가는 5.1 에서 선반영, 병렬 워커는 자기 도메인 핸들러만 수정
+- 각 T2 커밋 직전 `test-runner` 검증, 5.5.T2 에서 lint(FSD)+커버리지 50%+ 게이트
+- 참조 스킬: `fsd-architecture`, `web-testing`, `oss-selection`
+
+---
+
 ## 작업
 
 - [ ] 5.0 웹 관리 UI (Push 5)
-    - [ ] 5.1 Orval 클라이언트 셋업 — `orval.config.ts` (tags-split, react-query client, `shared/http` mutator), `pnpm gen:api` 스크립트, 생성물 `shared/api/` gitignore, 도메인 MSW 핸들러 베이스 (`tests/mocks/handlers.ts`: credentials/configs/channels/attempts)
-        - [ ] 5.1.T1 vitest 테스트 작성 — 생성된 훅 smoke 테스트 (`useGetCredentials` 가 MSW 응답을 반환, 표준 에러 응답 파싱)
-        - [ ] 5.1.T2 서버 기동 후 `pnpm gen:api` 성공 + `pnpm --filter web tsc --noEmit` + `pnpm --filter web test` 실행 및 검증
+    - [x] 5.1 Orval 클라이언트 셋업 — `orval.config.ts` (tags-split, react-query client, `shared/http` mutator), `pnpm gen:api` 스크립트, 생성물 `shared/api/` gitignore, 도메인 MSW 핸들러 베이스 (`tests/mocks/handlers.ts`: credentials/configs/channels/attempts)
+        - [x] 5.1.T1 vitest 테스트 작성 — 생성된 훅 smoke 테스트 (`useGetCredentials` 가 MSW 응답을 반환, 표준 에러 응답 파싱)
+        - [x] 5.1.T2 서버 기동 후 `pnpm gen:api` 성공 + `pnpm --filter web tsc --noEmit` + `pnpm --filter web test` 실행 및 검증
     - [ ] 5.2 엔티티 3종 — `entities/credential` (목록 카드, 마스킹 표시), `entities/config` (목록 행, enabled 배지), `entities/channel` (타입 아이콘, 마스킹 config 표시) — 각 slice `{ui,model,api,index.ts}`
         - [ ] 5.2.T1 vitest 테스트 작성 — 엔티티별 렌더 테스트 (마스킹 값 표시, enabled/disabled 상태, 타입별 아이콘)
         - [ ] 5.2.T2 `pnpm --filter web vitest run src/entities` 실행 및 검증

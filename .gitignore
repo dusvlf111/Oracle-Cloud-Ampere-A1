@@ -29,3 +29,7 @@ apps/web/src/shared/api/
 .DS_Store
 *.log
 .claude/.task-running
+
+# OpenAPI extraction artifact (Orval input)
+apps/server/openapi.json
+apps/server/openapi.err
