@@ -60,9 +60,9 @@
     - [x] 1.4 Next.js 15 스캐폴딩 — App Router, React 19, TypeScript, Tailwind CSS v4, shadcn/ui 초기화, FSD 디렉토리 골격 `src/{app,pages,widgets,features,entities,shared}` + slice 별 `index.ts`, `tsconfig.json` paths (`@/app` ~ `@/shared`), `app/layout.tsx` + Providers (`src/app/providers` — QueryClientProvider)
         - [ ] 1.4.T1 (1.6 vitest 셋업 후 소급 실행) 루트 레이아웃 렌더 smoke 테스트 작성 — `src/app/providers/Providers.test.tsx`
         - [x] 1.4.T2 `pnpm --filter web build` + `pnpm --filter web tsc --noEmit` 실행 및 검증
-    - [ ] 1.5 FSD 레이어 규칙 강제 — `eslint.config.js` 에 `eslint-plugin-boundaries` 설정 (PRD §5 규칙: 상위→하위만 허용, 같은 레이어 slice 간 직접 import 금지)
-        - [ ] 1.5.T1 위반 케이스 fixture 작성 — `entities` → `features` import 샘플 파일로 룰 동작 검증 (검증 후 샘플 제거 or `tests/lint-fixtures/`)
-        - [ ] 1.5.T2 `pnpm --filter web lint` 실행 — 위반 시 에러 발생, 정상 코드 통과 검증
+    - [x] 1.5 FSD 레이어 규칙 강제 — `eslint.config.js` 에 `eslint-plugin-boundaries` 설정 (PRD §5 규칙: 상위→하위만 허용, 같은 레이어 slice 간 직접 import 금지)
+        - [x] 1.5.T1 위반 케이스 fixture 작성 — `entities` → `features` import 샘플 파일로 룰 동작 검증 (검증 후 샘플 제거 or `tests/lint-fixtures/`)
+        - [x] 1.5.T2 `pnpm --filter web lint` 실행 — 위반 시 에러 발생, 정상 코드 통과 검증
     - [ ] 1.6 웹 테스트 인프라 — `vitest.config.ts` (jsdom), `@testing-library/react`, `@testing-library/user-event`, MSW (`tests/setup.ts`: `onUnhandledRequest: 'error'`), `tests/mocks/{server,handlers}.ts`
         - [ ] 1.6.T1 vitest 테스트 작성 — MSW 핸들러 동작 smoke 테스트 (`tests/setup.test.ts`: 등록된 핸들러 응답 + 미등록 호출 실패 확인), 1.4.T1 소급 작성
         - [ ] 1.6.T2 `pnpm --filter web test` 실행 및 검증
