@@ -54,9 +54,9 @@
     - [x] 6.4 web: 시도 이력 — `entities/attempt` (상태 배지: success/out_of_capacity/rate_limited/auth_error/other_error, duration 표시), 최근 50개 시도 테이블 (`@tanstack/react-table`, 설정별/상태별 필터, `refetchInterval` 5초)
         - [x] 6.4.T1 vitest 테스트 작성 — 상태별 배지 렌더, 테이블 필터 동작 (MSW: config_id/status 쿼리 검증)
         - [x] 6.4.T2 `pnpm --filter web vitest run src/entities/attempt` 실행 및 검증
-    - [ ] 6.5 web: 대시보드 페이지 — `pages/dashboard` (활성/비활성 설정 카운트 카드, 시도 이력 테이블 위젯, 성공 인스턴스 정보 카드: OCID/생성 시각), `widgets/{header,sidebar}` 네비게이션 (로그아웃 포함), `app/(protected)/page.tsx`
-        - [ ] 6.5.T1 vitest 테스트 작성 — 대시보드 통합 테스트 (MSW: 카운트 집계 표시, 성공 인스턴스 카드 렌더), 사이드바 네비게이션 링크
-        - [ ] 6.5.T2 `pnpm --filter web test` 실행 및 검증
+    - [x] 6.5 web: 대시보드 페이지 — `pages/dashboard` (활성/비활성 설정 카운트 카드, 시도 이력 테이블 위젯, 성공 인스턴스 정보 카드: OCID/생성 시각), `widgets/{header,sidebar}` 네비게이션 (로그아웃 포함), `app/(protected)/page.tsx`
+        - [x] 6.5.T1 vitest 테스트 작성 — 대시보드 통합 테스트 (MSW: 카운트 집계 표시, 성공 인스턴스 카드 렌더), 사이드바 네비게이션 링크
+        - [x] 6.5.T2 `pnpm --filter web test` 실행 및 검증
     - [ ] 6.6 부트스트랩 문서 + 최종 검증 — `README.md` (cli hash → APP_SECRET 생성 → `docker compose up -d` 절차, OSS Dependencies 섹션), `.env.example` 최종 정리, PRD §13 성공 기준 점검 (외부 차단 curl 검증 포함)
         - [ ] 6.6.T1 전체 테스트 스위트 보강 — 누락 커버리지 확인 (서버 70%+ / services·workers 80%+, 웹 50%+ / features·entities 70%+)
         - [ ] 6.6.T2 루트 `pnpm test` 전체 통과 + `docker compose up -d` 후 `curl localhost:8000/healthz` 실패·`curl localhost:3000/api/healthz` 성공 검증
