@@ -14,7 +14,11 @@ export default defineConfig({
       jsdom: { url: "http://localhost:3000" },
     },
     setupFiles: ["./tests/setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
+    include: [
+      "src/**/*.test.{ts,tsx}",
+      "tests/**/*.test.{ts,tsx}",
+      "middleware.test.ts",
+    ],
     exclude: ["node_modules", ".next", "src/**/__lint_fixture__/**"],
     coverage: {
       provider: "v8",
