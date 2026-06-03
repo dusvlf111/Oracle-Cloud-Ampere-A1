@@ -103,6 +103,26 @@ def db_app(engine) -> Iterator[None]:
         app.dependency_overrides.pop(real_get_session, None)
 
 
+@pytest.fixture
+def oci_mock(monkeypatch: pytest.MonkeyPatch):
+    """Patch ``oci.identity.IdentityClient`` used by the OCI client service.
+
+    Returns the MagicMock class so tests can configure
+    ``oci_mock.return_value.list_availability_domains.side_effect`` etc.
+    Never lets a real OCI call escape.
+    """
+    from unittest.mock import MagicMock
+
+    import app.services.oci_client as oci_client
+
+    client_cls = MagicMock(name="IdentityClient")
+    client_cls.return_value.list_availability_domains.return_value = MagicMock(
+        data=["AD-1", "AD-2", "AD-3"]
+    )
+    monkeypatch.setattr(oci_client.oci.identity, "IdentityClient", client_cls)
+    return client_cls
+
+
 @pytest_asyncio.fixture
 async def authed_db_client(admin_settings, db_app) -> AsyncClient:
     """Logged-in AsyncClient whose log routes hit the in-memory test DB."""

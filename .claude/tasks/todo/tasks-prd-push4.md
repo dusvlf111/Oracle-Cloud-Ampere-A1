@@ -48,9 +48,9 @@
     - [x] 4.2 crypto 서비스 — `services/crypto.py` (`APP_SECRET` 에서 AES-256-GCM 키 도출, encrypt/decrypt JSON), 마스킹 유틸 (`***` + 마지막 4자, OCID/fingerprint 마스킹)
         - [x] 4.2.T1 pytest 테스트 작성 — `tests/unit/services/test_crypto.py` (암복호화 라운드트립, 변조 시 복호화 실패, 마스킹 형식)
         - [x] 4.2.T2 `pytest -q tests/unit/services/test_crypto.py` 실행 및 검증
-    - [ ] 4.3 OCI 클라이언트 서비스 — `services/oci_client.py` (자격증명 dict → oci config 구성, `asyncio.to_thread` 래핑, `ListAvailabilityDomains` 호출 verify, OCI 예외 → 도메인 분류: auth_error/out_of_capacity/rate_limited/other)
-        - [ ] 4.3.T1 pytest 테스트 작성 — `tests/unit/services/test_oci_client.py` (oci SDK mock: verify 성공/실패, 예외 분류 매핑), conftest 에 `oci_mock` fixture 추가
-        - [ ] 4.3.T2 `pytest -q tests/unit/services/test_oci_client.py` 실행 및 검증
+    - [x] 4.3 OCI 클라이언트 서비스 — `services/oci_client.py` (자격증명 dict → oci config 구성, `asyncio.to_thread` 래핑, `ListAvailabilityDomains` 호출 verify, OCI 예외 → 도메인 분류: auth_error/out_of_capacity/rate_limited/other)
+        - [x] 4.3.T1 pytest 테스트 작성 — `tests/unit/services/test_oci_client.py` (oci SDK mock: verify 성공/실패, 예외 분류 매핑), conftest 에 `oci_mock` fixture 추가
+        - [x] 4.3.T2 `pytest -q tests/unit/services/test_oci_client.py` 실행 및 검증
     - [ ] 4.4 credentials API — `POST /api/credentials` (multipart: form + private key 파일 → `/data/keys/{id}.pem` chmod 600, passphrase 암호화), `GET` 목록 (마스킹), `POST /{id}/verify` (`{ok, error?}`), `DELETE` 204 + 키 파일 삭제, 에러 코드 `credential_not_found`/`oci_auth_error` (PRD §8)
         - [ ] 4.4.T1 pytest 테스트 작성 — `tests/api/test_credentials.py` (multipart 생성→파일 권한 600, 응답 마스킹, verify mock 성공/실패, 삭제, 미인증 401)
         - [ ] 4.4.T2 `pytest -q tests/api/test_credentials.py` 실행 및 검증
