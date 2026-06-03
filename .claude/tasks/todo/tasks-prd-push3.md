@@ -57,9 +57,9 @@
     - [x] 3.5 SSE 스트림 + log_pruner — `GET /api/logs/stream` (sse-starlette, LogBus 구독, 필터 쿼리, 15초 `ping` heartbeat), `workers/log_pruner.py` (5분 주기, 7일/10,000행 cutoff DELETE, `AppSetting` 정책 값)
         - [x] 3.5.T1 pytest 테스트 작성 — `tests/api/test_logs_stream.py` (publish → SSE 이벤트 수신, 필터 미일치 미수신), `tests/unit/workers/test_log_pruner.py` (기간/행수 초과 삭제)
         - [x] 3.5.T2 `pytest -q tests/api/test_logs_stream.py tests/unit/workers/test_log_pruner.py` 실행 및 검증
-    - [ ] 3.6 web: 로그 엔티티 + 필터 — `entities/log` (행 컴포넌트: 로컬 타임존 타임스탬프, 레벨 색 배지, 컨텍스트/traceback 펼침), `features/log-filter` (레벨 멀티 선택, logger prefix, config_id, 기간, 검색어 → 쿼리 파라미터 상태)
-        - [ ] 3.6.T1 vitest 테스트 작성 — `entities/log/ui/LogRow.test.tsx` (레벨별 배지, traceback 펼침), `features/log-filter` 테스트 (user-event 로 필터 변경 → 콜백 파라미터)
-        - [ ] 3.6.T2 `pnpm --filter web vitest run src/entities/log src/features/log-filter` 실행 및 검증
+    - [x] 3.6 web: 로그 엔티티 + 필터 — `entities/log` (행 컴포넌트: 로컬 타임존 타임스탬프, 레벨 색 배지, 컨텍스트/traceback 펼침), `features/log-filter` (레벨 멀티 선택, logger prefix, config_id, 기간, 검색어 → 쿼리 파라미터 상태)
+        - [x] 3.6.T1 vitest 테스트 작성 — `entities/log/ui/LogRow.test.tsx` (레벨별 배지, traceback 펼침), `features/log-filter` 테스트 (user-event 로 필터 변경 → 콜백 파라미터)
+        - [x] 3.6.T2 `pnpm --filter web vitest run src/entities/log src/features/log-filter` 실행 및 검증
     - [ ] 3.7 web: 로그 스트림 위젯 + 페이지 — `widgets/log-stream` (EventSource 구독, 실시간↔일시정지 토글, 자동 스크롤 + 위로 스크롤 시 자동 일시정지, 500행 초과 가상 스크롤), `pages/logs` (과거 조회 + 실시간 결합, 삭제 확인 모달) + `app/(protected)/logs/page.tsx`
         - [ ] 3.7.T1 vitest 테스트 작성 — `widgets/log-stream` (EventSource mock: 수신→행 추가, 일시정지 시 구독 해제), `pages/logs` 통합 테스트 (MSW: 과거 로그 로드 + 필터 적용 + 삭제 흐름)
         - [ ] 3.7.T2 `pnpm --filter web test` 실행 및 검증
