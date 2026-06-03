@@ -93,6 +93,7 @@ docker compose up -d
 | eslint, typescript-eslint, eslint-config-next | 린트 | MIT |
 | eslint-plugin-boundaries, eslint-plugin-import, eslint-import-resolver-typescript | FSD 레이어 규칙 강제 | MIT |
 | vitest, @vitejs/plugin-react, jsdom | 테스트 러너 | MIT |
+| @vitest/coverage-v8 | 웹 테스트 커버리지(v8 provider) | MIT |
 | @testing-library/react, @testing-library/user-event, @testing-library/jest-dom | 컴포넌트 테스트 | MIT |
 | msw | API 모킹 | MIT |
 | orval | OpenAPI → TS 클라이언트/React Query 훅 생성 | MIT |

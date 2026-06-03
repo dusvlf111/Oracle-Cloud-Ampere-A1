@@ -44,7 +44,7 @@
 
 ## 작업
 
-- [ ] 5.0 웹 관리 UI (Push 5)
+- [x] 5.0 웹 관리 UI (Push 5)
     - [x] 5.1 Orval 클라이언트 셋업 — `orval.config.ts` (tags-split, react-query client, `shared/http` mutator), `pnpm gen:api` 스크립트, 생성물 `shared/api/` gitignore, 도메인 MSW 핸들러 베이스 (`tests/mocks/handlers.ts`: credentials/configs/channels/attempts)
         - [x] 5.1.T1 vitest 테스트 작성 — 생성된 훅 smoke 테스트 (`useGetCredentials` 가 MSW 응답을 반환, 표준 에러 응답 파싱)
         - [x] 5.1.T2 서버 기동 후 `pnpm gen:api` 성공 + `pnpm --filter web tsc --noEmit` + `pnpm --filter web test` 실행 및 검증
@@ -57,6 +57,6 @@
     - [x] 5.4 알림 채널 페이지 — 채널 CRUD 폼 (타입 선택 시 동적 필드: discord/slack webhook, telegram bot_token/chat_id, ntfy server_url/topic/token/priority/tags — zod discriminated union), `features/channel-test` (테스트 발송 버튼 → ok/error 결과 표시), `pages/channels` 조합 + 라우트
         - [x] 5.4.T1 vitest 테스트 작성 — 타입 전환 시 폼 필드 변경, ntfy 채널 생성 제출 페이로드 검증, 테스트 발송 성공/실패 표시 (MSW)
         - [x] 5.4.T2 `pnpm --filter web vitest run src/features/channel-test src/pages/channels` 실행 및 검증
-    - [ ] 5.5 인스턴스 설정 페이지 — `features/config-create` (전체 폼 필드 + `channel_ids` 멀티 선택, zod 검증), `features/config-toggle` (토글 → optimistic update + 캐시 무효화), `pages/configs` 조합 + 라우트
-        - [ ] 5.5.T1 vitest 테스트 작성 — 설정 생성 폼 (필수 필드 검증, channel_ids 선택 포함 제출), 토글 동작 (MSW: enabled 반전 응답), 페이지 통합 시나리오
-        - [ ] 5.5.T2 `pnpm --filter web test` + `pnpm --filter web lint` (FSD 위반 없음) 실행 및 검증 — 웹 커버리지 50%+ (features/entities 70%+) 확인
+    - [x] 5.5 인스턴스 설정 페이지 — `features/config-create` (전체 폼 필드 + `channel_ids` 멀티 선택, zod 검증), `features/config-toggle` (토글 → optimistic update + 캐시 무효화), `pages/configs` 조합 + 라우트
+        - [x] 5.5.T1 vitest 테스트 작성 — 설정 생성 폼 (필수 필드 검증, channel_ids 선택 포함 제출), 토글 동작 (MSW: enabled 반전 응답), 페이지 통합 시나리오
+        - [x] 5.5.T2 `pnpm --filter web test` + `pnpm --filter web lint` (FSD 위반 없음) 실행 및 검증 — 웹 커버리지 50%+ (features/entities 70%+) 확인
