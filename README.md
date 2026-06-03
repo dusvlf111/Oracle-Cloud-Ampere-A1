@@ -73,6 +73,10 @@ docker compose up -d
 | slowapi | 로그인 rate limit (메모리 backend) | MIT |
 | python-ulid | 요청 ID (ULID) 부여 | MIT |
 | sse-starlette | 로그 실시간 스트림 SSE (`/api/logs/stream`, EventSourceResponse) | BSD-3 |
+| cryptography | AES-256-GCM 암복호화 (passphrase/채널 토큰 `config_enc`) | Apache-2.0 / BSD-3 |
+| tenacity | 알림 발송 재시도/백오프 (httpx 5xx·timeout) | Apache-2.0 |
+| python-multipart | credentials API multipart 폼 + PEM 파일 업로드 | Apache-2.0 |
+| oci | Oracle Cloud 공식 SDK (자격증명 verify, 인스턴스 생성) | UPL-1.0 / Apache-2.0 |
 
 ### Web (Node, pnpm)
 
