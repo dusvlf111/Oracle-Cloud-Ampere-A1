@@ -57,9 +57,9 @@
     - [x] 1.3 SQLModel 엔진/세션 + Alembic 셋업 — `db/session.py` (SQLite, `PRAGMA journal_mode=WAL`), `alembic.ini`, `alembic/env.py` (SQLModel metadata 연동), 빈 초기 revision
         - [x] 1.3.T1 pytest 테스트 작성 — `tests/unit/db/test_session.py` (in-memory 엔진 생성, WAL pragma 적용 확인), conftest 에 `engine`/`session` fixture 추가
         - [x] 1.3.T2 `pytest -q tests/unit/db/` + `alembic upgrade head` (임시 DB) 실행 및 검증
-    - [ ] 1.4 Next.js 15 스캐폴딩 — App Router, React 19, TypeScript, Tailwind CSS v4, shadcn/ui 초기화, FSD 디렉토리 골격 `src/{app,pages,widgets,features,entities,shared}` + slice 별 `index.ts`, `tsconfig.json` paths (`@/app` ~ `@/shared`), `app/layout.tsx` + Providers (`src/app/providers` — QueryClientProvider)
+    - [x] 1.4 Next.js 15 스캐폴딩 — App Router, React 19, TypeScript, Tailwind CSS v4, shadcn/ui 초기화, FSD 디렉토리 골격 `src/{app,pages,widgets,features,entities,shared}` + slice 별 `index.ts`, `tsconfig.json` paths (`@/app` ~ `@/shared`), `app/layout.tsx` + Providers (`src/app/providers` — QueryClientProvider)
         - [ ] 1.4.T1 (1.6 vitest 셋업 후 소급 실행) 루트 레이아웃 렌더 smoke 테스트 작성 — `src/app/providers/Providers.test.tsx`
-        - [ ] 1.4.T2 `pnpm --filter web build` + `pnpm --filter web tsc --noEmit` 실행 및 검증
+        - [x] 1.4.T2 `pnpm --filter web build` + `pnpm --filter web tsc --noEmit` 실행 및 검증
     - [ ] 1.5 FSD 레이어 규칙 강제 — `eslint.config.js` 에 `eslint-plugin-boundaries` 설정 (PRD §5 규칙: 상위→하위만 허용, 같은 레이어 slice 간 직접 import 금지)
         - [ ] 1.5.T1 위반 케이스 fixture 작성 — `entities` → `features` import 샘플 파일로 룰 동작 검증 (검증 후 샘플 제거 or `tests/lint-fixtures/`)
         - [ ] 1.5.T2 `pnpm --filter web lint` 실행 — 위반 시 에러 발생, 정상 코드 통과 검증
