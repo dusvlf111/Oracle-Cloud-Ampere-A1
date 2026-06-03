@@ -45,9 +45,9 @@
     - [x] 4.1 도메인 모델 + 마이그레이션 — `OciCredential`/`InstanceConfig`/`NotificationChannel`/`ConfigChannelLink`(m2m)/`Attempt`/`AppSetting` SQLModel 정의 (PRD §6) + Alembic revision
         - [x] 4.1.T1 pytest 테스트 작성 — `tests/unit/db/test_models.py` (관계 탐색: credential→configs, config↔channels m2m, attempt→config; polyfactory 팩토리 정의)
         - [x] 4.1.T2 `pytest -q tests/unit/db/test_models.py` + `alembic upgrade head` 실행 및 검증
-    - [ ] 4.2 crypto 서비스 — `services/crypto.py` (`APP_SECRET` 에서 AES-256-GCM 키 도출, encrypt/decrypt JSON), 마스킹 유틸 (`***` + 마지막 4자, OCID/fingerprint 마스킹)
-        - [ ] 4.2.T1 pytest 테스트 작성 — `tests/unit/services/test_crypto.py` (암복호화 라운드트립, 변조 시 복호화 실패, 마스킹 형식)
-        - [ ] 4.2.T2 `pytest -q tests/unit/services/test_crypto.py` 실행 및 검증
+    - [x] 4.2 crypto 서비스 — `services/crypto.py` (`APP_SECRET` 에서 AES-256-GCM 키 도출, encrypt/decrypt JSON), 마스킹 유틸 (`***` + 마지막 4자, OCID/fingerprint 마스킹)
+        - [x] 4.2.T1 pytest 테스트 작성 — `tests/unit/services/test_crypto.py` (암복호화 라운드트립, 변조 시 복호화 실패, 마스킹 형식)
+        - [x] 4.2.T2 `pytest -q tests/unit/services/test_crypto.py` 실행 및 검증
     - [ ] 4.3 OCI 클라이언트 서비스 — `services/oci_client.py` (자격증명 dict → oci config 구성, `asyncio.to_thread` 래핑, `ListAvailabilityDomains` 호출 verify, OCI 예외 → 도메인 분류: auth_error/out_of_capacity/rate_limited/other)
         - [ ] 4.3.T1 pytest 테스트 작성 — `tests/unit/services/test_oci_client.py` (oci SDK mock: verify 성공/실패, 예외 분류 매핑), conftest 에 `oci_mock` fixture 추가
         - [ ] 4.3.T2 `pytest -q tests/unit/services/test_oci_client.py` 실행 및 검증
