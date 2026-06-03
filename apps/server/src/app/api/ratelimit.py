@@ -3,6 +3,11 @@
 - slowapi: 5 requests / minute / IP on POST /api/auth/login → 429.
 - In-memory tracker: 10 consecutive failures from an IP → 5-minute block.
 - Time source is injectable (`_now`) so tests can advance/expire the block.
+
+Storage backend (task 8.4): the slowapi limiter uses an in-memory store by
+default (SQLite-friendly, no extra service). Setting ``REDIS_URL`` switches the
+limiter to a shared Redis store so the per-minute cap is enforced across
+processes/replicas. When unset the ``memory://`` store is kept.
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.api.deps import AppError
+from app.config import get_settings
 
 MAX_CONSECUTIVE_FAILURES = 10
 BLOCK_DURATION_SEC = 5 * 60
@@ -26,10 +32,19 @@ def client_key(request: Request) -> str:
     return get_remote_address(request) or "testclient"
 
 
-# slowapi limiter with explicit in-memory storage (SQLite-friendly, no Redis).
+def rate_limit_storage_uri(redis_url: str | None = None) -> str:
+    """Resolve the slowapi storage URI from settings.
+
+    Returns the configured ``REDIS_URL`` when present, else ``memory://``.
+    """
+    url = redis_url if redis_url is not None else get_settings().redis_url
+    return url.strip() if url and url.strip() else "memory://"
+
+
+# slowapi limiter — storage chosen from settings (memory:// by default).
 limiter = Limiter(
     key_func=client_key,
-    storage_uri="memory://",
+    storage_uri=rate_limit_storage_uri(),
     default_limits=[],
 )
 

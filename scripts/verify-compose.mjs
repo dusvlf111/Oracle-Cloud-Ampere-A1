@@ -96,6 +96,25 @@ check(
   "top-level `volumes:` must declare postgres-data",
 );
 
+// Redis profile service (opt-in via `--profile redis`).
+check(redisBlock !== "", "redis profile service must be defined");
+check(
+  /profiles:\s*\[?\s*["']?redis["']?/.test(redisBlock),
+  "redis must be gated behind the `redis` profile",
+);
+check(
+  /image:\s*redis:7-alpine/.test(redisBlock),
+  "redis must use redis:7-alpine",
+);
+check(
+  /healthcheck:/.test(redisBlock) && /redis-cli/.test(redisBlock),
+  "redis must define a redis-cli ping healthcheck",
+);
+check(
+  /REDIS_URL:\s*\$\{REDIS_URL/.test(serverBlock),
+  "server must pass through REDIS_URL (empty = in-memory)",
+);
+
 if (errors.length) {
   console.error("docker-compose verification FAILED:");
   for (const e of errors) console.error("  - " + e);

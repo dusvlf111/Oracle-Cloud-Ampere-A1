@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Session cookie Secure flag — enable in production (HTTPS). PRD §7.7.2.
     session_secure: bool = False
 
+    # Rate-limit storage — empty = in-memory (default). Set to a redis URL
+    # (e.g. redis://redis:6379/0) to share the login limiter across processes
+    # (task 8.4, PRD §7.7.3).
+    redis_url: str = ""
+
     # Concurrency
     oci_max_concurrent: int = 10
     oci_per_credential_max: int = 1
