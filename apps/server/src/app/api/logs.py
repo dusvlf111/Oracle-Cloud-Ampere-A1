@@ -9,21 +9,43 @@ requires an authenticated session (``require_login``).
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import json
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import delete as sa_delete
 from sqlmodel import Session, select
+from sse_starlette.sse import EventSourceResponse
 
 from app.api.deps import AppError, require_login
 from app.db.models import LogEntry
 from app.db.session import get_session
+from app.log_bus import log_bus
 
 router = APIRouter(prefix="/api/logs", tags=["logs"])
 
 MAX_LIMIT = 200
+HEARTBEAT_SEC = 15.0
+
+
+def _record_matches(
+    rec: dict,
+    *,
+    levels: list[str] | None,
+    logger: str | None,
+    config_id: int | None,
+) -> bool:
+    if levels and rec.get("level") not in levels:
+        return False
+    if logger and not str(rec.get("logger", "")).startswith(logger):
+        return False
+    if config_id is not None and rec.get("config_id") != config_id:
+        return False
+    return True
 
 
 class LogPage(BaseModel):
@@ -82,6 +104,62 @@ def list_logs(
         _encode_cursor(items[-1].id) if has_more and items and items[-1].id else None
     )
     return LogPage(items=items, next_cursor=next_cursor, has_more=has_more)
+
+
+async def sse_event_stream(
+    *,
+    is_disconnected: Callable[[], Awaitable[bool]],
+    levels: list[str] | None,
+    logger: str | None,
+    config_id: int | None,
+    heartbeat: float = HEARTBEAT_SEC,
+) -> AsyncIterator[dict]:
+    """Yield SSE ``log`` / ``ping`` events off the :data:`log_bus`.
+
+    Extracted from the route so it can be unit-tested without a live HTTP
+    connection: callers feed records by publishing to ``log_bus`` and control
+    termination via the ``is_disconnected`` predicate.
+    """
+    norm_levels = [lvl.upper() for lvl in levels] if levels else None
+    async with log_bus.subscribe() as queue:
+        while True:
+            if await is_disconnected():
+                break
+            try:
+                rec = await asyncio.wait_for(queue.get(), timeout=heartbeat)
+            except asyncio.TimeoutError:
+                yield {"event": "ping", "data": "{}"}
+                continue
+            if _record_matches(
+                rec, levels=norm_levels, logger=logger, config_id=config_id
+            ):
+                yield {"event": "log", "data": json.dumps(rec, default=str)}
+
+
+@router.get("/stream")
+async def stream_logs(
+    request: Request,
+    levels: list[str] | None = Query(default=None),
+    logger: str | None = Query(default=None),
+    config_id: int | None = Query(default=None),
+    _user: str = Depends(require_login),
+) -> EventSourceResponse:
+    """Live log stream over SSE (PRD §8, §9.3.7).
+
+    Subscribes to the in-memory :data:`log_bus`, applies the same filter
+    semantics as the query endpoint, and emits a ``ping`` heartbeat every
+    15 seconds so idle proxies don't drop the connection.
+    """
+    return EventSourceResponse(
+        sse_event_stream(
+            is_disconnected=request.is_disconnected,
+            levels=levels,
+            logger=logger,
+            config_id=config_id,
+        )
+    )
+
+    return EventSourceResponse(event_gen())
 
 
 @router.delete("", status_code=204)

@@ -7,7 +7,8 @@ place.
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
@@ -25,6 +26,7 @@ from app.config import get_settings
 from app.db.session import get_engine
 from app.log_bus import attach_log_bus, log_bus
 from app.logging_config import configure_logging
+from app.workers.log_pruner import run_log_pruner
 
 
 @asynccontextmanager
@@ -35,12 +37,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     db_level_name = (settings.log_level_db or settings.log_level).upper()
     db_level = getattr(logging, db_level_name, logging.INFO)
-    configure_logging(engine=get_engine())
+    engine = get_engine()
+    configure_logging(engine=engine)
     attach_log_bus(level=db_level)
     log_bus.bind_loop()
-    # Background worker supervisor (incl. log_pruner) will be spawned here (Push 5).
-    yield
-    # Shutdown: graceful cancellation of worker tasks will go here.
+    # Log retention worker (PRD §9.3.8); the full poller supervisor lands in Push 5.
+    pruner_task = asyncio.create_task(run_log_pruner(engine))
+    try:
+        yield
+    finally:
+        pruner_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await pruner_task
 
 
 app = FastAPI(title="OCI Ampere A1 Auto-Provisioner", lifespan=lifespan)
