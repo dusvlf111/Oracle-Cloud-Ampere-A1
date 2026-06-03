@@ -8,7 +8,10 @@ services:
     expose:
       - "8000"
     environment:
-      DATABASE_URL: sqlite:////data/app.db
+      # Default: SQLite on the /data volume (simple mode).
+      # Full mode (PostgreSQL + Redis) is enabled by the override file:
+      #   docker compose -f docker-compose.yml -f docker-compose.full.yml up -d
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/app.db}
       APP_SECRET: ${APP_SECRET}
       APP_USERNAME: ${APP_USERNAME}
       APP_PASSWORD_HASH: ${APP_PASSWORD_HASH}
@@ -19,6 +22,12 @@ services:
       LOG_LEVEL_DB: ${LOG_LEVEL_DB:-INFO}
       LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-7}
       LOG_RETENTION_ROWS: ${LOG_RETENTION_ROWS:-10000}
+      # PostgreSQL pool tuning (only applied when DATABASE_URL is postgres).
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
+      DB_POOL_PRE_PING: ${DB_POOL_PRE_PING:-true}
+      # Redis rate-limit storage (empty = in-memory; full mode wires redis).
+      REDIS_URL: ${REDIS_URL:-}
     volumes:
       - ./data:/data
     restart: unless-stopped

@@ -9,12 +9,14 @@
   },
   "scripts": {
     "dev:web": "pnpm --filter web dev",
-    "dev:server": "cd apps/server && uv run uvicorn app.main:app --reload --port 8000",
-    "gen:api": "pnpm --filter web gen:api",
+    "dev:server": "mkdir -p data/keys && uv --project apps/server run --env-file .env alembic -c apps/server/alembic.ini upgrade head && uv --project apps/server run --env-file .env uvicorn app.main:app --app-dir apps/server/src --reload --port 8000",
+    "gen:api": "node scripts/sync-api.mjs",
     "test:web": "pnpm --filter web test",
     "test:server": "cd apps/server && uv run pytest -q --cov=app --cov-report=term-missing",
     "test": "pnpm test:server && pnpm test:web",
     "lint": "pnpm --filter web lint",
-    "build": "pnpm --filter web build"
+    "build": "pnpm --filter web build",
+    "compose:up": "docker compose up -d --build",
+    "compose:full": "docker compose -f docker-compose.yml -f docker-compose.full.yml up -d --build"
   }
 }

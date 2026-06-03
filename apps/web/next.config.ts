@@ -1,3 +1,4 @@
+import withSerwistInit from "@serwist/next";
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
@@ -19,4 +20,13 @@ const config: NextConfig = {
   },
 };
 
-export default config;
+// PWA service worker (Push 7). Source lives in the App Router at `app/sw.ts`
+// and is emitted to `public/sw.js`. Disabled in development so HMR is never
+// shadowed by a cached worker.
+const withSerwist = withSerwistInit({
+  swSrc: "app/sw.ts",
+  swDest: "public/sw.js",
+  disable: process.env.NODE_ENV === "development",
+});
+
+export default withSerwist(config);

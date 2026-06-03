@@ -19,6 +19,14 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "sqlite:////data/app.db"
+    # Connection pool tuning — only applied to non-SQLite (e.g. PostgreSQL)
+    # engines; SQLite uses its own connect_args/WAL path (PRD §9.2, §10).
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_pre_ping: bool = True
+
+    # Filesystem — OCI private keys stored here, chmod 600 (PRD §7.1, §9.1).
+    keys_dir: str = "/data/keys"
 
     # Security
     app_secret: str = ""
@@ -27,6 +35,11 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     # Session cookie Secure flag — enable in production (HTTPS). PRD §7.7.2.
     session_secure: bool = False
+
+    # Rate-limit storage — empty = in-memory (default). Set to a redis URL
+    # (e.g. redis://redis:6379/0) to share the login limiter across processes
+    # (task 8.4, PRD §7.7.3).
+    redis_url: str = ""
 
     # Concurrency
     oci_max_concurrent: int = 10

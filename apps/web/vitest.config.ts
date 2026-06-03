@@ -23,6 +23,13 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/shared/api/**", // Orval-generated
+        "src/**/__lint_fixture__/**",
+        "src/**/index.ts", // re-export barrels
+        "src/**/*.test.{ts,tsx}",
+      ],
     },
   },
   resolve: {

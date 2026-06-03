@@ -24,13 +24,13 @@ describe("next.config rewrites", () => {
     delete process.env.INTERNAL_API_URL;
     const rewrites = await config.rewrites!();
     const rules = Array.isArray(rewrites) ? rewrites : rewrites.afterFiles;
-    expect(rules[0].destination).toBe("http://server:8000/api/:path*");
+    expect(rules![0].destination).toBe("http://server:8000/api/:path*");
   });
 
   it("respects a custom internal URL", async () => {
     process.env.INTERNAL_API_URL = "http://api.internal:9000";
     const rewrites = await config.rewrites!();
     const rules = Array.isArray(rewrites) ? rewrites : rewrites.afterFiles;
-    expect(rules[0].destination).toBe("http://api.internal:9000/api/:path*");
+    expect(rules![0].destination).toBe("http://api.internal:9000/api/:path*");
   });
 });

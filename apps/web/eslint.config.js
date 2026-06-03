@@ -17,6 +17,8 @@ export default tseslint.config(
       "next-env.d.ts",
       "src/shared/api/**", // Orval-generated
       "src/**/__lint_fixture__/**", // intentional FSD-violation fixtures (1.5.T1)
+      "public/sw.js", // Serwist-generated service worker (build artifact)
+      "public/swe-worker-*.js", // Serwist runtime worker (build artifact)
     ],
   },
   js.configs.recommended,
