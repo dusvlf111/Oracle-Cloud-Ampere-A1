@@ -34,6 +34,76 @@ pnpm --filter web typecheck
 pnpm build
 ```
 
+## 실행 방법
+
+기본 동작은 **무설정** 이다 — SQLite + 인메모리 로그인 rate limit. PostgreSQL/Redis 는
+`.env` + compose 프로필로 켜는 **옵션**이다 (미설정 시 외부 서비스 의존 없음).
+
+### ① 로컬 dev (uv + pnpm 듀얼 기동)
+
+```bash
+cp .env.example .env
+# .env 작성:
+#  - APP_SECRET:  python -c "import secrets,base64;print(base64.b64encode(secrets.token_bytes(32)).decode())"
+#  - APP_PASSWORD_HASH:  cd apps/server && uv run python -m app.cli hash '내비밀번호'
+#       ⚠️ 해시에 $ 가 있으므로 .env 에서 반드시 작은따옴표로 감쌀 것
+#  - 로컬 dev 는 DATABASE_URL=sqlite:///./data/app.db, KEYS_DIR=./data/keys 권장
+
+pnpm dev:server   # data/keys 준비 → alembic upgrade head → uvicorn :8000 (.env 자동 로드)
+pnpm dev:web      # Next.js :3000 (브라우저는 /api 만 호출 → rewrites 로 :8000 프록시)
+```
+
+`dev:server` 는 기동 전 `alembic upgrade head` 를 선행하므로 스키마가 항상 최신이다.
+(lifespan 의 스키마 가드가 미적용 DB 면 명확한 오류로 즉시 중단한다.)
+
+### ② Docker (기본 — SQLite)
+
+```bash
+cp .env.example .env   # APP_SECRET / APP_PASSWORD_HASH 채우기
+docker compose up -d
+```
+
+`web` 만 호스트 `3000` 에 노출되고 `server` 는 compose 네트워크 내부 전용이다.
+DB 는 `./data` 볼륨의 SQLite 이며 컨테이너 재시작 시 lifespan 이 폴링 supervisor 를
+다시 기동한다(아래 ⑤).
+
+### ③ PostgreSQL 전환 (선택)
+
+```bash
+# .env 에 활성화
+DATABASE_URL=postgresql+psycopg://oci:oci@postgres:5432/oci
+POSTGRES_USER=oci
+POSTGRES_PASSWORD=oci
+POSTGRES_DB=oci
+# (선택) DB_POOL_SIZE / DB_MAX_OVERFLOW / DB_POOL_PRE_PING
+
+docker compose --profile postgres up -d
+# 최초 1회 마이그레이션
+docker compose --profile postgres exec server alembic upgrade head
+```
+
+SQLite WAL 대신 SQLAlchemy 커넥션 풀이 적용된다(`db/session.py` 의 dialect 분기).
+
+### ④ Redis 전환 (선택 — 로그인 rate limit 공유 저장소)
+
+```bash
+# .env 에 활성화
+REDIS_URL=redis://redis:6379/0
+
+docker compose --profile redis up -d        # PostgreSQL 과 동시: --profile postgres --profile redis
+```
+
+`REDIS_URL` 이 비어 있으면 기존 인메모리 저장소를 그대로 쓴다(프로세스 단위).
+
+### ⑤ 재시작 자동 재개 동작
+
+- 폴링 상태의 **단일 진실 공급원은 DB 의 `InstanceConfig.enabled` 플래그**다.
+- 프로세스/컨테이너 재시작 시 FastAPI lifespan 이 폴링 supervisor 를 새로 생성하고,
+  `enabled=True` 인 모든 config 의 폴링 task 를 즉시 재spawn 한다.
+- 성공/인증오류로 `enabled=False` 가 된 config 는 재시작 후에도 재개되지 않는다.
+- `rate_limited` 백오프·tenacity 재시도 카운터는 in-memory 라서 재시작 시 초기화되어
+  즉시 재시도한다. compose `restart: unless-stopped` 로 크래시 시에도 자동 복구된다.
+
 ## 배포 (Docker Compose)
 
 API 서버는 호스트에 노출되지 않는다(컨테이너 `ports` 미선언, `expose`만).
@@ -77,9 +147,12 @@ curl -sf http://localhost:3000/api/healthz && echo "프록시 OK"
 ### 검증 (정적)
 
 ```bash
-node scripts/verify-compose.mjs    # server ports 미선언 + expose:8000, web ports:3000 확인
+node scripts/verify-compose.mjs    # server 미노출 + web :3000 + postgres/redis 프로필·volume·healthcheck 정적 검증
 node scripts/verify-workspace.mjs  # pnpm workspace 구성 확인
 ```
+
+> docker CLI 가 있는 환경이라면 `docker compose config` /
+> `docker compose --profile postgres --profile redis config` 로 동일하게 검증 가능하다.
 
 ## OSS Dependencies
 
@@ -107,6 +180,9 @@ node scripts/verify-workspace.mjs  # pnpm workspace 구성 확인
 | tenacity | 알림 발송 재시도/백오프 (httpx 5xx·timeout) | Apache-2.0 |
 | python-multipart | credentials API multipart 폼 + PEM 파일 업로드 | Apache-2.0 |
 | oci | Oracle Cloud 공식 SDK (자격증명 verify, 인스턴스 생성) | UPL-1.0 / Apache-2.0 |
+| psycopg[binary] | PostgreSQL 드라이버 (옵션 — `DATABASE_URL=postgresql+psycopg://`) | LGPL-3.0 |
+| limits[redis] | slowapi rate-limit 저장소 backend (옵션 — `REDIS_URL` 설정 시 Redis) | MIT |
+| fakeredis[lua] (dev) | Redis 저장소 단위 테스트 (Lua 스크립트 포함, 실 서버 불필요) | BSD-3 |
 
 ### Web (Node, pnpm)
 
