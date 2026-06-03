@@ -11,6 +11,7 @@ import * as React from "react";
 import { useAttempts } from "../api";
 import type { Attempt, AttemptStatus } from "../model/types";
 
+import { AttemptCardList } from "./AttemptCardList";
 import { AttemptStatusBadge } from "./AttemptStatusBadge";
 
 const STATUS_OPTIONS: AttemptStatus[] = [
@@ -121,7 +122,8 @@ export function AttemptsTable({ defaultConfigId }: AttemptsTableProps) {
         </label>
       </div>
 
-      <table className="w-full border-collapse text-left text-sm">
+      {/* Desktop: full table. Hidden below md in favor of the card list. */}
+      <table className="hidden w-full border-collapse text-left text-sm md:table">
         <thead>
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id} className="border-b border-gray-200">
@@ -149,6 +151,11 @@ export function AttemptsTable({ defaultConfigId }: AttemptsTableProps) {
           ))}
         </tbody>
       </table>
+
+      {/* Mobile: stacked cards from the same data. Hidden from md up. */}
+      <div className="md:hidden">
+        <AttemptCardList attempts={rows} />
+      </div>
 
       {!isLoading && rows.length === 0 && (
         <p className="px-3 py-6 text-center text-sm text-gray-400">

@@ -1,11 +1,31 @@
 "use client";
 
+import { Check, Copy } from "lucide-react";
 import * as React from "react";
 
 import { AttemptsTable, useAttempts } from "@/entities/attempt";
 import { useConfigs } from "@/entities/config";
 
 const REFETCH_INTERVAL_MS = 5000;
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = React.useState(false);
+  return (
+    <button
+      type="button"
+      aria-label="Copy OCID"
+      data-testid="copy-ocid"
+      onClick={() => {
+        void navigator.clipboard?.writeText(value);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded text-green-700 hover:bg-green-100"
+    >
+      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+    </button>
+  );
+}
 
 function StatCard({
   label,
@@ -44,7 +64,7 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard testid="stat-active" label="Active configs" value={activeCount} />
         <StatCard
           testid="stat-inactive"
@@ -63,10 +83,15 @@ export function DashboardPage() {
             ✅ 최근 생성된 인스턴스
           </h2>
           <dl className="mt-2 grid grid-cols-1 gap-1 text-sm text-green-900 sm:grid-cols-2">
-            <div>
+            <div className="sm:col-span-2">
               <dt className="inline text-green-700">OCID: </dt>
-              <dd className="inline font-mono">
-                {latestSuccess.instance_ocid ?? "—"}
+              <dd className="mt-0.5 flex items-start gap-1">
+                <span className="min-w-0 break-all font-mono">
+                  {latestSuccess.instance_ocid ?? "—"}
+                </span>
+                {latestSuccess.instance_ocid && (
+                  <CopyButton value={latestSuccess.instance_ocid} />
+                )}
               </dd>
             </div>
             <div>

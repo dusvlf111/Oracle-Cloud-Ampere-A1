@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { server } from "../../../../tests/mocks/server";
 
@@ -86,5 +86,39 @@ describe("DashboardPage", () => {
 
     const card = await screen.findByTestId("success-card");
     expect(within(card).getByText(/ocid1.instance..created/)).toBeInTheDocument();
+  });
+
+  it("copies the instance OCID via the copy button", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+
+    server.use(
+      http.get(CONFIGS, () => HttpResponse.json([])),
+      http.get(ATTEMPTS, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get("status") === "success") {
+          return HttpResponse.json([
+            {
+              id: 99,
+              config_id: 5,
+              attempted_at: "2026-06-03T10:30:00Z",
+              status: "success",
+              instance_ocid: "ocid1.instance..created",
+              duration_ms: 3000,
+              message: null,
+            },
+          ]);
+        }
+        return HttpResponse.json([]);
+      }),
+    );
+    renderPage();
+
+    const card = await screen.findByTestId("success-card");
+    fireEvent.click(within(card).getByTestId("copy-ocid"));
+    expect(writeText).toHaveBeenCalledWith("ocid1.instance..created");
   });
 });

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import * as React from "react";
@@ -48,12 +48,32 @@ describe("AttemptsTable", () => {
     renderTable();
 
     await waitFor(() => expect(screen.getAllByTestId("attempt-row")).toHaveLength(2));
-    const badges = screen.getAllByTestId("attempt-status-badge");
-    expect(badges[0]).toHaveTextContent("success");
-    expect(badges[1]).toHaveTextContent("out of capacity");
-    expect(screen.getByText("2.2 s")).toBeInTheDocument();
-    expect(screen.getByText("800 ms")).toBeInTheDocument();
-    expect(screen.getByText("ocid1.instance..ok")).toBeInTheDocument();
+    // Scope assertions to the table rows (the mobile card list mirrors them).
+    const rows = screen.getAllByTestId("attempt-row");
+    expect(within(rows[0]).getByTestId("attempt-status-badge")).toHaveTextContent("success");
+    expect(within(rows[1]).getByTestId("attempt-status-badge")).toHaveTextContent(
+      "out of capacity",
+    );
+    expect(within(rows[0]).getByText("2.2 s")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("800 ms")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("ocid1.instance..ok")).toBeInTheDocument();
+  });
+
+  it("renders both the desktop table and the mobile card list from the same data", async () => {
+    server.use(
+      http.get(API, () =>
+        HttpResponse.json([
+          attempt({ id: 1, status: "success", instance_ocid: "ocid1.instance..ok" }),
+          attempt({ id: 2, status: "rate_limited" }),
+        ]),
+      ),
+    );
+    renderTable();
+
+    await waitFor(() => expect(screen.getAllByTestId("attempt-row")).toHaveLength(2));
+    // Mobile card presentation lives in the same slice and mirrors the rows.
+    expect(screen.getByTestId("attempt-card-list")).toBeInTheDocument();
+    expect(screen.getAllByTestId("attempt-card")).toHaveLength(2);
   });
 
   it("sends config_id and status as query params when filtered", async () => {
