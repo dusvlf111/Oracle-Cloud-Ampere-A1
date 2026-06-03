@@ -78,4 +78,16 @@ describe("ChannelsPage", () => {
       expect(screen.queryByText("supabin ntfy")).not.toBeInTheDocument(),
     );
   });
+
+  it("renders the confirm dialog as a mobile bottom sheet (responsive)", async () => {
+    server.use(http.get(API, () => HttpResponse.json([channel(2, "supabin ntfy")])));
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("supabin ntfy");
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog", { name: /confirm delete channel/i });
+    const panel = dialog.querySelector("div")!;
+    expect(panel.className).toContain("w-full");
+    expect(panel.className).toContain("sm:w-80");
+  });
 });

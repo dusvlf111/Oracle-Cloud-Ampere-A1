@@ -117,9 +117,9 @@ export function CredentialsPage() {
           role="dialog"
           aria-modal="true"
           aria-label="Confirm delete credential"
-          className="fixed inset-0 flex items-center justify-center bg-black/40"
+          className="fixed inset-0 flex items-end justify-center bg-black/40 sm:items-center"
         >
-          <div className="w-80 rounded-md bg-white p-4 shadow-lg">
+          <div className="w-full rounded-t-md bg-white p-4 shadow-lg sm:w-80 sm:rounded-md">
             <p className="text-sm">Delete this credential? This cannot be undone.</p>
             <div className="mt-4 flex justify-end gap-2">
               <Button

@@ -18,7 +18,7 @@ export function ConfigRow({ config, actions }: ConfigRowProps) {
   return (
     <div
       data-testid="config-row"
-      className="flex items-center gap-3 border-b border-gray-100 px-3 py-2 text-sm"
+      className="flex flex-col gap-2 border-b border-gray-100 px-3 py-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:py-2"
     >
       <span
         data-testid="config-enabled-badge"

@@ -69,4 +69,21 @@ describe("CredentialsPage", () => {
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("deleted"));
     await waitFor(() => expect(screen.queryByText("main")).not.toBeInTheDocument());
   });
+
+  it("renders the confirm dialog as a mobile bottom sheet (responsive)", async () => {
+    server.use(http.get(API, () => HttpResponse.json([credential(1, "main")])));
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("main");
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /confirm delete credential/i,
+    });
+    // Full-width sheet on mobile, fixed-width modal from sm up.
+    const panel = dialog.querySelector("div")!;
+    expect(panel.className).toContain("w-full");
+    expect(panel.className).toContain("sm:w-80");
+  });
 });

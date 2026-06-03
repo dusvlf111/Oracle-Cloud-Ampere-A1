@@ -96,4 +96,25 @@ describe("ConfigsPage", () => {
       expect(screen.queryByText("ARM main")).not.toBeInTheDocument(),
     );
   });
+
+  it("renders the config row stacked on mobile (responsive)", async () => {
+    server.use(http.get(API, () => HttpResponse.json([config(5, "ARM main")])));
+    renderPage();
+    await screen.findByText("ARM main");
+    const row = screen.getByTestId("config-row");
+    expect(row.className).toContain("flex-col");
+    expect(row.className).toContain("sm:flex-row");
+  });
+
+  it("renders the confirm dialog as a mobile bottom sheet (responsive)", async () => {
+    server.use(http.get(API, () => HttpResponse.json([config(5, "ARM main")])));
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("ARM main");
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog", { name: /confirm delete config/i });
+    const panel = dialog.querySelector("div")!;
+    expect(panel.className).toContain("w-full");
+    expect(panel.className).toContain("sm:w-80");
+  });
 });
