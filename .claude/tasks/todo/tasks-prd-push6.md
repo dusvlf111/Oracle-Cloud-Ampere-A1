@@ -45,9 +45,9 @@
     - [x] 6.1 config_task 폴링 루프 — `workers/config_task.py` (자체 `retry_interval_sec` sleep + 전역 최소 200ms 가드, `credential_semaphores[credential_id]` (기본 max=1, env `OCI_PER_CREDENTIAL_MAX`) + 전역 `Semaphore(OCI_MAX_CONCURRENT)`, `asyncio.to_thread` launch_instance, 성공 → `Attempt(success)` + `enabled=False` + 자가 종료, `OutOfCapacity` → `Attempt(out_of_capacity)` 기록만, task 단위 세션 분리, 로그 컨텍스트 `extra=` 동봉)
         - [x] 6.1.T1 pytest 테스트 작성 — `tests/unit/workers/test_config_task.py` (OCI mock: 성공 시 Attempt+비활성화+종료, 용량 부족 시 기록 후 재시도 sleep, 같은 credential 2-task 직렬화 / 다른 credential 병렬 실행 검증)
         - [x] 6.1.T2 `pytest -q tests/unit/workers/test_config_task.py` 실행 및 검증
-    - [ ] 6.2 에러 처리 + 알림 연동 — 429 → tenacity 지수 백오프 + `rate_limited` 기록 + sleep 연장, 인증/권한 오류 → `auth_error` + `enabled=False` + 인증 오류 알림 (priority 4) + 종료, 성공 시 연결된 모든 채널 `asyncio.gather(..., return_exceptions=True)` 병렬 발송 (priority 5), `OutOfCapacity` 는 무알림 (PRD §7.5.3)
-        - [ ] 6.2.T1 pytest 테스트 작성 — 429 백오프 동작, auth_error 시 비활성화+알림 mock 호출 검증, 성공 시 다중 채널 병렬 발송 (1개 채널 실패해도 나머지 발송), out_of_capacity 무알림
-        - [ ] 6.2.T2 `pytest -q tests/unit/workers/` 실행 및 검증
+    - [x] 6.2 에러 처리 + 알림 연동 — 429 → tenacity 지수 백오프 + `rate_limited` 기록 + sleep 연장, 인증/권한 오류 → `auth_error` + `enabled=False` + 인증 오류 알림 (priority 4) + 종료, 성공 시 연결된 모든 채널 `asyncio.gather(..., return_exceptions=True)` 병렬 발송 (priority 5), `OutOfCapacity` 는 무알림 (PRD §7.5.3)
+        - [x] 6.2.T1 pytest 테스트 작성 — 429 백오프 동작, auth_error 시 비활성화+알림 mock 호출 검증, 성공 시 다중 채널 병렬 발송 (1개 채널 실패해도 나머지 발송), out_of_capacity 무알림
+        - [x] 6.2.T2 `pytest -q tests/unit/workers/` 실행 및 검증
     - [ ] 6.3 poller supervisor + lifespan — `workers/poller.py` (10초 주기 `enabled=True` 목록 vs 실행 중 task diff → spawn/cancel, config 수정 감지 시 재시작), `main.py` lifespan 에서 `asyncio.create_task(poller_supervisor())` + log_pruner 기동, shutdown 시 전체 graceful cancel (`asyncio.wait` + `CancelledError` 전파)
         - [ ] 6.3.T1 pytest 테스트 작성 — `tests/integration/test_poller_supervisor.py` (toggle on → task spawn, toggle off → cancel, config 수정 → 재시작, shutdown graceful 종료, 다중 계정 + 다중 config 동시 폴링 시나리오)
         - [ ] 6.3.T2 `pytest -q tests/integration/test_poller_supervisor.py` 실행 및 검증
