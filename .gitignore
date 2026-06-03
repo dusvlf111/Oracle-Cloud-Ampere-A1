@@ -10,12 +10,22 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+*.egg-info/
 
 # Node
 node_modules/
 .next/
+out/
 coverage/
+*.tsbuildinfo
+
+# Orval generated API client (regenerated via `pnpm gen:api`)
+apps/web/src/shared/api/
+
+# Data volume (SQLite DB, OCI keys)
+/data/
 
 # Misc
 .DS_Store
 *.log
+.claude/.task-running

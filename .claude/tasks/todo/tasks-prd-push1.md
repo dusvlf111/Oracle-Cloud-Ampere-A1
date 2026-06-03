@@ -25,12 +25,32 @@
 
 ---
 
+### 에이전트 실행 전략 (push-lead)
+
+| 작업 | 담당 | 의존성 |
+|---|---|---|
+| 1.1 | push-lead 직접 (루트 설정) | — |
+| 1.2 → 1.3 | `server-worker` | 1.1 |
+| 1.4 → 1.5 → 1.6 | `web-worker` | 1.1 |
+| 1.7 | `server-worker` (Dockerfile/compose) + `web-worker` (rewrites) 협업, push-lead 조율 | 1.2~1.6 전체 |
+
+```
+1.1 ──┬── [server-worker] 1.2 → 1.3 ──┬── 1.7 (배리어)
+      └── [web-worker]    1.4 → 1.5 → 1.6 ──┘
+```
+
+- **병렬**: server 체인(1.2~1.3) ∥ web 체인(1.4~1.6) — 파일 영역 완전 분리
+- 각 커밋의 T2 는 커밋 직전 `test-runner` 호출로 검증, Push 완료 시 test-runner 가 전체 스위트 최종 게이트
+- 참조 스킬: `fastapi-patterns`, `python-testing` (server) / `fsd-architecture`, `web-testing` (web) / `oss-selection` (공통)
+
+---
+
 ## 작업
 
 - [ ] 1.0 모노레포 인프라 구축 (Push 1)
-    - [ ] 1.1 pnpm workspace 초기화 — `pnpm-workspace.yaml`, 루트 `package.json` 스크립트 (PRD §5), `.gitignore`, `.env.example` (PRD §10)
-        - [ ] 1.1.T1 검증 스크립트 작성 — workspace 구성 파일 존재/스키마 확인 (이후 1.6에서 vitest 로 통합)
-        - [ ] 1.1.T2 `pnpm install` 성공 + `pnpm -r ls` 로 workspace 인식 검증
+    - [x] 1.1 pnpm workspace 초기화 — `pnpm-workspace.yaml`, 루트 `package.json` 스크립트 (PRD §5), `.gitignore`, `.env.example` (PRD §10)
+        - [x] 1.1.T1 검증 스크립트 작성 — workspace 구성 파일 존재/스키마 확인 (이후 1.6에서 vitest 로 통합)
+        - [x] 1.1.T2 `pnpm install` 성공 + `pnpm -r ls` 로 workspace 인식 검증
     - [ ] 1.2 FastAPI 서버 스캐폴딩 — `apps/server/pyproject.toml` (uv, fastapi/uvicorn/pydantic-settings), `src/app/{__init__,main,config}.py`, `/healthz` 엔드포인트, pytest/pytest-asyncio (`asyncio_mode=auto`)/pytest-cov/pytest-httpx/polyfactory 셋업 + `tests/conftest.py` 기본 fixture
         - [ ] 1.2.T1 pytest 테스트 작성 — `tests/api/test_healthz.py` (`GET /healthz` → `{status:"ok"}`, 인증 불필요), `tests/unit/test_config.py` (env 로딩)
         - [ ] 1.2.T2 `cd apps/server && pytest -q` 실행 및 검증
