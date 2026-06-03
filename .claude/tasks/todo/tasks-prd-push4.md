@@ -2,7 +2,7 @@
 
 > PRD: `.claude/tasks/prd.md` (§6 데이터 모델, §7.1/7.2/7.5 기능, §8 API, §11 MVP Push 4 서버 파트)
 > Push 범위: 서버 도메인 — 모델 6종 + 마이그레이션, AES-256-GCM 암호화, OCI 클라이언트 서비스, 자격증명/설정/채널/시도 API, notifier 4종 (Discord/Slack/Telegram/ntfy) + 테스트 발송
-> 상태: 🔲 진행 중
+> 상태: ✅ 완료
 
 ---
 
@@ -41,7 +41,7 @@
 
 ## 작업
 
-- [ ] 4.0 서버 도메인 API + 알림 채널 (Push 4)
+- [x] 4.0 서버 도메인 API + 알림 채널 (Push 4)
     - [x] 4.1 도메인 모델 + 마이그레이션 — `OciCredential`/`InstanceConfig`/`NotificationChannel`/`ConfigChannelLink`(m2m)/`Attempt`/`AppSetting` SQLModel 정의 (PRD §6) + Alembic revision
         - [x] 4.1.T1 pytest 테스트 작성 — `tests/unit/db/test_models.py` (관계 탐색: credential→configs, config↔channels m2m, attempt→config; polyfactory 팩토리 정의)
         - [x] 4.1.T2 `pytest -q tests/unit/db/test_models.py` + `alembic upgrade head` 실행 및 검증
@@ -60,6 +60,6 @@
     - [x] 4.6 notifier 모듈 — `services/notifier/` (`NotificationPayload{title,body,tags}` 공통 포맷, `send(channel, payload)` 디스패치, discord embed/slack block/telegram HTML/ntfy 헤더 변환, httpx 타임아웃 5초 + tenacity 재시도 2회, 최종 실패 ERROR 로그만, ntfy self-hosted `server_url` + Bearer 토큰 옵션) (PRD §7.5)
         - [x] 4.6.T1 pytest 테스트 작성 — `tests/unit/services/test_notifier_*.py` (pytest-httpx: 채널별 요청 포맷/헤더 검증 — ntfy Title/Priority/Tags/Authorization, 재시도 동작, 실패 시 예외 미전파)
         - [x] 4.6.T2 `pytest -q tests/unit/services/ -k notifier` 실행 및 검증
-    - [ ] 4.7 channels + attempts API — channels CRUD (`config_enc` AES 암호화 저장, Pydantic discriminated union 타입 검증, 응답 sensitive 마스킹), `POST /{id}/test` (`{ok, error?}` — 실패도 200), `GET /api/attempts` (config_id/status/limit 쿼리), `channel_not_found` 에러
-        - [ ] 4.7.T1 pytest 테스트 작성 — `tests/api/test_channels.py` (타입별 생성/검증 실패 422, 마스킹 응답, 테스트 발송 mock ok/실패), `tests/api/test_attempts.py` (필터 조회)
-        - [ ] 4.7.T2 `pytest -q tests/api/test_channels.py tests/api/test_attempts.py` + `pytest -q --cov=app` (커버리지 70%+ 확인) 실행 및 검증
+    - [x] 4.7 channels + attempts API — channels CRUD (`config_enc` AES 암호화 저장, Pydantic discriminated union 타입 검증, 응답 sensitive 마스킹), `POST /{id}/test` (`{ok, error?}` — 실패도 200), `GET /api/attempts` (config_id/status/limit 쿼리), `channel_not_found` 에러
+        - [x] 4.7.T1 pytest 테스트 작성 — `tests/api/test_channels.py` (타입별 생성/검증 실패 422, 마스킹 응답, 테스트 발송 mock ok/실패), `tests/api/test_attempts.py` (필터 조회)
+        - [x] 4.7.T2 `pytest -q tests/api/test_channels.py tests/api/test_attempts.py` + `pytest -q --cov=app` (커버리지 70%+ 확인) 실행 및 검증
