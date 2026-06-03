@@ -19,6 +19,11 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "sqlite:////data/app.db"
+    # Connection pool tuning — only applied to non-SQLite (e.g. PostgreSQL)
+    # engines; SQLite uses its own connect_args/WAL path (PRD §9.2, §10).
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_pre_ping: bool = True
 
     # Filesystem — OCI private keys stored here, chmod 600 (PRD §7.1, §9.1).
     keys_dir: str = "/data/keys"

@@ -21,7 +21,25 @@ const serverBlock = text.slice(
   text.indexOf("\n  server:"),
   text.indexOf("\n  web:"),
 );
-const webBlock = text.slice(text.indexOf("\n  web:"));
+// web block runs until the next optional profile service (postgres/redis) or EOF.
+const webEnd = (() => {
+  const candidates = ["\n  postgres:", "\n  redis:", "\nvolumes:"]
+    .map((m) => text.indexOf(m))
+    .filter((i) => i !== -1);
+  return candidates.length ? Math.min(...candidates) : text.length;
+})();
+const webBlock = text.slice(text.indexOf("\n  web:"), webEnd);
+
+const sliceService = (name) => {
+  const start = text.indexOf(`\n  ${name}:`);
+  if (start === -1) return "";
+  const after = text.slice(start + 1);
+  // until the next top-level (2-space) key or top-level `volumes:`.
+  const m = after.search(/\n  [a-z][\w-]*:|\nvolumes:/);
+  return m === -1 ? after : after.slice(0, m);
+};
+const postgresBlock = sliceService("postgres");
+const redisBlock = sliceService("redis");
 
 // server must NOT publish host ports.
 check(
@@ -47,6 +65,35 @@ check(
 check(
   /condition:\s*service_healthy/.test(webBlock),
   "web must depend_on server: service_healthy",
+);
+
+// server: DATABASE_URL must default to SQLite but be overridable from .env.
+check(
+  /DATABASE_URL:\s*\$\{DATABASE_URL:-sqlite/.test(serverBlock),
+  "server DATABASE_URL must default to SQLite and be env-overridable",
+);
+
+// PostgreSQL profile service (opt-in via `--profile postgres`).
+check(postgresBlock !== "", "postgres profile service must be defined");
+check(
+  /profiles:\s*\[?\s*["']?postgres["']?/.test(postgresBlock),
+  "postgres must be gated behind the `postgres` profile",
+);
+check(
+  /image:\s*postgres:16-alpine/.test(postgresBlock),
+  "postgres must use postgres:16-alpine",
+);
+check(
+  /healthcheck:/.test(postgresBlock) && /pg_isready/.test(postgresBlock),
+  "postgres must define a pg_isready healthcheck",
+);
+check(
+  /postgres-data:/.test(postgresBlock),
+  "postgres must persist data to the postgres-data volume",
+);
+check(
+  /^volumes:/m.test(text) && /\n {2}postgres-data:/.test(text),
+  "top-level `volumes:` must declare postgres-data",
 );
 
 if (errors.length) {
