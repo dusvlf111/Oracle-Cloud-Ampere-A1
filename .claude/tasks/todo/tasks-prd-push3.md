@@ -2,7 +2,7 @@
 
 > PRD: `.claude/tasks/prd.md` (§7.6 로그 뷰어, §9.3 로깅, §11 MVP Push 3)
 > Push 범위: 커스텀 로깅 인프라 (`JsonFormatter`, `DbLogHandler`, `LogBus`, `log_pruner`) + 로그 조회/SSE API + `/logs` 페이지 (FSD: `pages/logs` + `widgets/log-stream` + `features/log-filter`)
-> 상태: 🔲 진행 중
+> 상태: ✅ 완료
 
 ---
 
@@ -41,7 +41,7 @@
 
 ## 작업
 
-- [ ] 3.0 로깅 인프라 + 로그 뷰어 (Push 3)
+- [x] 3.0 로깅 인프라 + 로그 뷰어 (Push 3)
     - [x] 3.1 `LogEntry` 모델 + Alembic 마이그레이션 — timestamp/level/logger 인덱스, `config_id`/`attempt_id`/`credential_id`/`extra`/`exc_info` 컨텍스트 컬럼 (PRD §6)
         - [x] 3.1.T1 pytest 테스트 작성 — `tests/unit/db/test_log_entry.py` (생성/인덱스 컬럼 조회), 마이그레이션 up/down 검증
         - [x] 3.1.T2 `pytest -q tests/unit/db/` + `alembic upgrade head` 실행 및 검증
@@ -60,6 +60,6 @@
     - [x] 3.6 web: 로그 엔티티 + 필터 — `entities/log` (행 컴포넌트: 로컬 타임존 타임스탬프, 레벨 색 배지, 컨텍스트/traceback 펼침), `features/log-filter` (레벨 멀티 선택, logger prefix, config_id, 기간, 검색어 → 쿼리 파라미터 상태)
         - [x] 3.6.T1 vitest 테스트 작성 — `entities/log/ui/LogRow.test.tsx` (레벨별 배지, traceback 펼침), `features/log-filter` 테스트 (user-event 로 필터 변경 → 콜백 파라미터)
         - [x] 3.6.T2 `pnpm --filter web vitest run src/entities/log src/features/log-filter` 실행 및 검증
-    - [ ] 3.7 web: 로그 스트림 위젯 + 페이지 — `widgets/log-stream` (EventSource 구독, 실시간↔일시정지 토글, 자동 스크롤 + 위로 스크롤 시 자동 일시정지, 500행 초과 가상 스크롤), `pages/logs` (과거 조회 + 실시간 결합, 삭제 확인 모달) + `app/(protected)/logs/page.tsx`
-        - [ ] 3.7.T1 vitest 테스트 작성 — `widgets/log-stream` (EventSource mock: 수신→행 추가, 일시정지 시 구독 해제), `pages/logs` 통합 테스트 (MSW: 과거 로그 로드 + 필터 적용 + 삭제 흐름)
-        - [ ] 3.7.T2 `pnpm --filter web test` 실행 및 검증
+    - [x] 3.7 web: 로그 스트림 위젯 + 페이지 — `widgets/log-stream` (EventSource 구독, 실시간↔일시정지 토글, 자동 스크롤 + 위로 스크롤 시 자동 일시정지, 500행 초과 가상 스크롤), `pages/logs` (과거 조회 + 실시간 결합, 삭제 확인 모달) + `app/(protected)/logs/page.tsx`
+        - [x] 3.7.T1 vitest 테스트 작성 — `widgets/log-stream` (EventSource mock: 수신→행 추가, 일시정지 시 구독 해제), `pages/logs` 통합 테스트 (MSW: 과거 로그 로드 + 필터 적용 + 삭제 흐름)
+        - [x] 3.7.T2 `pnpm --filter web test` 실행 및 검증
