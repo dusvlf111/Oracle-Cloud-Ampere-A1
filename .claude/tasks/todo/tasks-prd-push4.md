@@ -54,9 +54,9 @@
     - [x] 4.4 credentials API — `POST /api/credentials` (multipart: form + private key 파일 → `/data/keys/{id}.pem` chmod 600, passphrase 암호화), `GET` 목록 (마스킹), `POST /{id}/verify` (`{ok, error?}`), `DELETE` 204 + 키 파일 삭제, 에러 코드 `credential_not_found`/`oci_auth_error` (PRD §8)
         - [x] 4.4.T1 pytest 테스트 작성 — `tests/api/test_credentials.py` (multipart 생성→파일 권한 600, 응답 마스킹, verify mock 성공/실패, 삭제, 미인증 401)
         - [x] 4.4.T2 `pytest -q tests/api/test_credentials.py` 실행 및 검증
-    - [ ] 4.5 configs API — CRUD (`GET`/`POST`/`PUT`/`DELETE`) + `POST /{id}/toggle`, `channel_ids` m2m 갱신, `*Create`/`*Update` 스키마로 read-only 필드 보호, `config_not_found` 에러, 라우터 태그 `configs`
-        - [ ] 4.5.T1 pytest 테스트 작성 — `tests/api/test_configs.py` (CRUD 전체, channel_ids 연결/갱신, toggle 후 enabled 반전, 존재하지 않는 credential_id 422/404)
-        - [ ] 4.5.T2 `pytest -q tests/api/test_configs.py` 실행 및 검증
+    - [x] 4.5 configs API — CRUD (`GET`/`POST`/`PUT`/`DELETE`) + `POST /{id}/toggle`, `channel_ids` m2m 갱신, `*Create`/`*Update` 스키마로 read-only 필드 보호, `config_not_found` 에러, 라우터 태그 `configs`
+        - [x] 4.5.T1 pytest 테스트 작성 — `tests/api/test_configs.py` (CRUD 전체, channel_ids 연결/갱신, toggle 후 enabled 반전, 존재하지 않는 credential_id 422/404)
+        - [x] 4.5.T2 `pytest -q tests/api/test_configs.py` 실행 및 검증
     - [ ] 4.6 notifier 모듈 — `services/notifier/` (`NotificationPayload{title,body,tags}` 공통 포맷, `send(channel, payload)` 디스패치, discord embed/slack block/telegram HTML/ntfy 헤더 변환, httpx 타임아웃 5초 + tenacity 재시도 2회, 최종 실패 ERROR 로그만, ntfy self-hosted `server_url` + Bearer 토큰 옵션) (PRD §7.5)
         - [ ] 4.6.T1 pytest 테스트 작성 — `tests/unit/services/test_notifier_*.py` (pytest-httpx: 채널별 요청 포맷/헤더 검증 — ntfy Title/Priority/Tags/Authorization, 재시도 동작, 실패 시 예외 미전파)
         - [ ] 4.6.T2 `pytest -q tests/unit/services/ -k notifier` 실행 및 검증

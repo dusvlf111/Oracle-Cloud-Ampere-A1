@@ -18,6 +18,7 @@ from starlette.middleware.sessions import SessionMiddleware
 import logging
 
 from app.api import auth as auth_api
+from app.api import configs as configs_api
 from app.api import credentials as credentials_api
 from app.api import logs as logs_api
 from app.api.deps import RequestIdMiddleware
@@ -78,6 +79,7 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 # Routers.
 app.include_router(auth_api.router)
 app.include_router(credentials_api.router)
+app.include_router(configs_api.router)
 app.include_router(logs_api.router)
 
 
