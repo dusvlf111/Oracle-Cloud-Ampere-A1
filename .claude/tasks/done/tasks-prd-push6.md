@@ -2,7 +2,7 @@
 
 > PRD: `.claude/tasks/prd.md` (§7.3 워커, §7.4 대시보드, §7.5.3 발송 시점, §9.2 동시성, §11 MVP Push 5)
 > Push 범위: 다중 계정 동시 폴링 워커 (supervisor + per-config task + per-credential semaphore) + 성공/에러 시 다중 채널 알림 + 대시보드 + 부트스트랩 문서
-> 상태: 🔲 진행 중
+> 상태: ✅ 완료 (2026-06-03)
 
 ---
 
@@ -57,6 +57,6 @@
     - [x] 6.5 web: 대시보드 페이지 — `pages/dashboard` (활성/비활성 설정 카운트 카드, 시도 이력 테이블 위젯, 성공 인스턴스 정보 카드: OCID/생성 시각), `widgets/{header,sidebar}` 네비게이션 (로그아웃 포함), `app/(protected)/page.tsx`
         - [x] 6.5.T1 vitest 테스트 작성 — 대시보드 통합 테스트 (MSW: 카운트 집계 표시, 성공 인스턴스 카드 렌더), 사이드바 네비게이션 링크
         - [x] 6.5.T2 `pnpm --filter web test` 실행 및 검증
-    - [ ] 6.6 부트스트랩 문서 + 최종 검증 — `README.md` (cli hash → APP_SECRET 생성 → `docker compose up -d` 절차, OSS Dependencies 섹션), `.env.example` 최종 정리, PRD §13 성공 기준 점검 (외부 차단 curl 검증 포함)
-        - [ ] 6.6.T1 전체 테스트 스위트 보강 — 누락 커버리지 확인 (서버 70%+ / services·workers 80%+, 웹 50%+ / features·entities 70%+)
-        - [ ] 6.6.T2 루트 `pnpm test` 전체 통과 + `docker compose up -d` 후 `curl localhost:8000/healthz` 실패·`curl localhost:3000/api/healthz` 성공 검증
+    - [x] 6.6 부트스트랩 문서 + 최종 검증 — `README.md` (cli hash → APP_SECRET 생성 → `docker compose up -d` 절차, OSS Dependencies 섹션 @tanstack/react-table 추가, 외부 차단 curl 검증), `.env.example` 최종 정리(기존 완비), PRD §13 성공 기준 점검
+        - [x] 6.6.T1 전체 테스트 스위트 보강 — 누락 커버리지 확인 (서버 93% / services·workers 84~100%, 웹 91.5% / features·entities·widgets 70%+)
+        - [x] 6.6.T2 루트 `pnpm test` 전체 통과(서버155/웹84) + docker 미설치로 라이브 curl 대신 `node scripts/verify-compose.mjs` 정적 검증 (server 미노출 + web:3000)

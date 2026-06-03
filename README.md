@@ -40,16 +40,46 @@ API 서버는 호스트에 노출되지 않는다(컨테이너 `ports` 미선언
 브라우저는 `http://localhost:3000/api/*` 만 호출하고 Next.js `rewrites()` 가
 내부 네트워크 `http://server:8000` 으로 프록시한다.
 
+### 부트스트랩 절차 (PRD §10)
+
 ```bash
-# 1. 비밀번호 해시 생성 (Push 2 의 cli 헬퍼)
+# 1. 비밀번호 해시 생성 (Argon2id) — cli 헬퍼
 docker compose run --rm server python -m app.cli hash "내비밀번호"
-# 2. APP_SECRET 생성
+#    출력된 $argon2id$... 해시를 .env 의 APP_PASSWORD_HASH 에 붙여넣기
+
+# 2. APP_SECRET 생성 (32 bytes base64 — 세션 서명 + AES-256-GCM 키 도출)
 python -c "import secrets, base64; print(base64.b64encode(secrets.token_bytes(32)).decode())"
-# 3. .env 작성 후 기동
+#    출력 값을 .env 의 APP_SECRET 에 붙여넣기
+
+# 3. .env 작성 (.env.example 복사) 후 스택 기동
+cp .env.example .env      # 위 1~2 값 채우기
 docker compose up -d
 ```
 
-`.env.example` 참고. 보안/노출 차단 검증은 `node scripts/verify-compose.mjs`.
+기동 후 `web` 컨테이너만 호스트 `3000` 포트에 노출된다. `server` 는 같은 compose
+네트워크 안에서만 접근 가능하고, FastAPI lifespan 이 폴링 supervisor + log_pruner 를
+백그라운드 task 로 기동한다(PRD §7.3, §9.3.8).
+
+### 외부 노출 차단 검증 (PRD §13)
+
+```bash
+# 서버는 호스트에 미노출 → connection refused 이어야 정상
+curl -sf http://localhost:8000/healthz && echo "노출됨(실패)" || echo "차단됨(정상)"
+
+# Next.js rewrites 경유는 성공해야 정상
+curl -sf http://localhost:3000/api/healthz && echo "프록시 OK"
+```
+
+> 참고: 본 작업 환경에는 docker 가 설치되어 있지 않아 라이브 기동/curl 검증을 수행할
+> 수 없다. 대신 `node scripts/verify-compose.mjs` 로 `docker-compose.yml` 의
+> `ports`/`expose`/rewrites 구성을 **정적 검증**한다(아래 "검증" 참조).
+
+### 검증 (정적)
+
+```bash
+node scripts/verify-compose.mjs    # server ports 미선언 + expose:8000, web ports:3000 확인
+node scripts/verify-workspace.mjs  # pnpm workspace 구성 확인
+```
 
 ## OSS Dependencies
 
@@ -90,6 +120,7 @@ docker compose up -d
 | zod | 런타임 스키마 검증 (폼/에러 파싱) | MIT |
 | @hookform/resolvers | react-hook-form ↔ zod 연결 | MIT |
 | @tanstack/react-virtual | 로그 뷰어 가상 스크롤 (500행 초과 시) | MIT |
+| @tanstack/react-table | 시도 이력 테이블 (headless, 대시보드) | MIT |
 | eslint, typescript-eslint, eslint-config-next | 린트 | MIT |
 | eslint-plugin-boundaries, eslint-plugin-import, eslint-import-resolver-typescript | FSD 레이어 규칙 강제 | MIT |
 | vitest, @vitejs/plugin-react, jsdom | 테스트 러너 | MIT |
