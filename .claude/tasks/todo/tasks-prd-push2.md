@@ -50,9 +50,9 @@
     - [x] 2.2 auth 서비스 + CLI 헬퍼 — `services/auth.py` (argon2-cffi 해시 검증, env `APP_USERNAME`/`APP_PASSWORD_HASH` 비교), `cli.py` (typer: `hash <password>` → Argon2id 해시 출력)
         - [x] 2.2.T1 pytest 테스트 작성 — `tests/unit/services/test_auth.py` (해시 생성→검증 라운드트립, 불일치 거부), CLI 출력 형식 (`$argon2id$` prefix)
         - [x] 2.2.T2 `pytest -q tests/unit/services/test_auth.py` 실행 및 검증
-    - [ ] 2.3 세션 + 인증 API — `SessionMiddleware` (itsdangerous, HTTP-only, SameSite=Lax, prod Secure), `api/auth.py` (`POST /api/auth/login`, `POST /api/auth/logout` 204, `GET /api/auth/me`), `deps.py` `require_login` (미인증 401 `unauthorized`), `/healthz`·`/api/auth/login` 만 공개
-        - [ ] 2.3.T1 pytest 테스트 작성 — `tests/api/test_auth.py` (정상 로그인→Set-Cookie→me 200, 잘못된 비밀번호 401, 로그아웃 후 me 401, 보호 엔드포인트 미인증 401), conftest 에 `authed_client` fixture 추가
-        - [ ] 2.3.T2 `pytest -q tests/api/test_auth.py` 실행 및 검증
+    - [x] 2.3 세션 + 인증 API — `SessionMiddleware` (itsdangerous, HTTP-only, SameSite=Lax, prod Secure), `api/auth.py` (`POST /api/auth/login`, `POST /api/auth/logout` 204, `GET /api/auth/me`), `deps.py` `require_login` (미인증 401 `unauthorized`), `/healthz`·`/api/auth/login` 만 공개
+        - [x] 2.3.T1 pytest 테스트 작성 — `tests/api/test_auth.py` (정상 로그인→Set-Cookie→me 200, 잘못된 비밀번호 401, 로그아웃 후 me 401, 보호 엔드포인트 미인증 401), conftest 에 `authed_client` fixture 추가
+        - [x] 2.3.T2 `pytest -q tests/api/test_auth.py` 실행 및 검증
     - [ ] 2.4 무차별 대입 방어 — slowapi (IP 당 5회/분 → 429 `rate_limited` + `retry_after_sec`), 연속 실패 10회 → 5분 IP 차단 (in-memory), 로그인 시도(성공/실패) WARNING 로그
         - [ ] 2.4.T1 pytest 테스트 작성 — `tests/api/test_auth_ratelimit.py` (6회째 429, 10회 실패 후 차단, 차단 해제 시간 mock)
         - [ ] 2.4.T2 `pytest -q tests/api/test_auth_ratelimit.py` 실행 및 검증

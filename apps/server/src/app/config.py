@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     app_username: str = "admin"
     app_password_hash: str = ""
     cors_origins: str = "http://localhost:3000"
+    # Session cookie Secure flag — enable in production (HTTPS). PRD §7.7.2.
+    session_secure: bool = False
 
     # Concurrency
     oci_max_concurrent: int = 10

@@ -11,9 +11,12 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
+from starlette.middleware.sessions import SessionMiddleware
 
+from app.api import auth as auth_api
 from app.api.deps import RequestIdMiddleware
 from app.api.errors import register_error_handlers
+from app.config import get_settings
 
 
 @asynccontextmanager
@@ -25,9 +28,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="OCI Ampere A1 Auto-Provisioner", lifespan=lifespan)
 
+_settings = get_settings()
+
+# Session cookie (PRD §7.7.2): HTTP-only, SameSite=Lax, Secure in prod.
+# Starlette runs middleware in reverse add-order, so SessionMiddleware (added
+# first here) ends up *inner* to RequestIdMiddleware — both run for every req.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=_settings.app_secret or "dev-insecure-secret-change-me",
+    session_cookie="session",
+    same_site="lax",
+    https_only=_settings.session_secure,
+)
+
 # Standard error envelope + request-id correlation (PRD §8).
 app.add_middleware(RequestIdMiddleware)
 register_error_handlers(app)
+
+# Routers.
+app.include_router(auth_api.router)
 
 
 @app.get("/healthz", tags=["meta"])

@@ -11,14 +11,45 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel
 
 import app.db.models as _models  # noqa: F401  (register tables on metadata)
+from app.config import Settings
 from app.db.session import create_db_engine
 from app.main import app
+from app.services import auth as _auth
+
+# Known single-admin pair used across auth tests.
+TEST_USERNAME = "admin"
+TEST_PASSWORD = "test-admin-pw"
 
 
 @pytest_asyncio.fixture
 async def client() -> AsyncClient:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+
+@pytest.fixture
+def admin_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
+    """Configure the single-admin credentials for auth tests (call-time)."""
+    settings = Settings(
+        app_username=TEST_USERNAME,
+        app_password_hash=_auth.hash_password(TEST_PASSWORD),
+        app_secret="x" * 32,
+    )
+    monkeypatch.setattr("app.services.auth.get_settings", lambda: settings)
+    return settings
+
+
+@pytest_asyncio.fixture
+async def authed_client(admin_settings: Settings) -> AsyncClient:
+    """AsyncClient that has logged in and carries the session cookie."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post(
+            "/api/auth/login",
+            json={"username": TEST_USERNAME, "password": TEST_PASSWORD},
+        )
+        assert resp.status_code == 200, resp.text
         yield ac
 
 
