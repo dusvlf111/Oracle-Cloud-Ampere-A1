@@ -54,9 +54,9 @@
     - [x] 1.2 FastAPI 서버 스캐폴딩 — `apps/server/pyproject.toml` (uv, fastapi/uvicorn/pydantic-settings), `src/app/{__init__,main,config}.py`, `/healthz` 엔드포인트, pytest/pytest-asyncio (`asyncio_mode=auto`)/pytest-cov/pytest-httpx/polyfactory 셋업 + `tests/conftest.py` 기본 fixture
         - [x] 1.2.T1 pytest 테스트 작성 — `tests/api/test_healthz.py` (`GET /healthz` → `{status:"ok"}`, 인증 불필요), `tests/unit/test_config.py` (env 로딩)
         - [x] 1.2.T2 `cd apps/server && pytest -q` 실행 및 검증
-    - [ ] 1.3 SQLModel 엔진/세션 + Alembic 셋업 — `db/session.py` (SQLite, `PRAGMA journal_mode=WAL`), `alembic.ini`, `alembic/env.py` (SQLModel metadata 연동), 빈 초기 revision
-        - [ ] 1.3.T1 pytest 테스트 작성 — `tests/unit/db/test_session.py` (in-memory 엔진 생성, WAL pragma 적용 확인), conftest 에 `engine`/`session` fixture 추가
-        - [ ] 1.3.T2 `pytest -q tests/unit/db/` + `alembic upgrade head` (임시 DB) 실행 및 검증
+    - [x] 1.3 SQLModel 엔진/세션 + Alembic 셋업 — `db/session.py` (SQLite, `PRAGMA journal_mode=WAL`), `alembic.ini`, `alembic/env.py` (SQLModel metadata 연동), 빈 초기 revision
+        - [x] 1.3.T1 pytest 테스트 작성 — `tests/unit/db/test_session.py` (in-memory 엔진 생성, WAL pragma 적용 확인), conftest 에 `engine`/`session` fixture 추가
+        - [x] 1.3.T2 `pytest -q tests/unit/db/` + `alembic upgrade head` (임시 DB) 실행 및 검증
     - [ ] 1.4 Next.js 15 스캐폴딩 — App Router, React 19, TypeScript, Tailwind CSS v4, shadcn/ui 초기화, FSD 디렉토리 골격 `src/{app,pages,widgets,features,entities,shared}` + slice 별 `index.ts`, `tsconfig.json` paths (`@/app` ~ `@/shared`), `app/layout.tsx` + Providers (`src/app/providers` — QueryClientProvider)
         - [ ] 1.4.T1 (1.6 vitest 셋업 후 소급 실행) 루트 레이아웃 렌더 smoke 테스트 작성 — `src/app/providers/Providers.test.tsx`
         - [ ] 1.4.T2 `pnpm --filter web build` + `pnpm --filter web tsc --noEmit` 실행 및 검증
