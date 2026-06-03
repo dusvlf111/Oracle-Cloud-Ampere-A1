@@ -2,6 +2,7 @@ export { LogRow } from "./ui/LogRow";
 export type { LogRowProps } from "./ui/LogRow";
 export {
   formatLocalTimestamp,
+  formatShortTimestamp,
   levelBadgeClass,
   LOG_LEVEL_ORDER,
 } from "./lib/format";

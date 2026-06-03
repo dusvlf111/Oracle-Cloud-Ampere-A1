@@ -51,6 +51,26 @@ describe("LogFilterBar", () => {
     expect(last.q).toBe("auth");
   });
 
+  it("renders a mobile toggle that opens/closes the filter panel", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<LogFilterBar onChange={onChange} />);
+
+    const toggle = screen.getByTestId("log-filter-toggle");
+    const fields = screen.getByTestId("log-filter-fields");
+
+    // Collapsed by default on mobile (hidden class, md:flex keeps it open on desktop).
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(fields.className).toContain("hidden");
+
+    await user.click(toggle);
+    expect(screen.getByTestId("log-filter-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByTestId("log-filter-fields").className).toContain("flex");
+  });
+
   it("resets every field on Reset", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();

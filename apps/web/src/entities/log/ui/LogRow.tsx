@@ -4,7 +4,11 @@ import * as React from "react";
 
 import { cn } from "@/shared";
 
-import { formatLocalTimestamp, levelBadgeClass } from "../lib/format";
+import {
+  formatLocalTimestamp,
+  formatShortTimestamp,
+  levelBadgeClass,
+} from "../lib/format";
 import type { LogEntry } from "../model/types";
 
 export interface LogRowProps {
@@ -26,8 +30,12 @@ export function LogRow({ entry }: LogRowProps) {
 
   return (
     <div className="border-b border-gray-100 px-3 py-2 font-mono text-xs">
-      <div className="flex items-start gap-3">
-        <span className="shrink-0 text-gray-500">
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-1 md:flex-nowrap">
+        {/* Mobile: time only. Desktop: full local timestamp. */}
+        <span className="shrink-0 text-gray-500 md:hidden">
+          {formatShortTimestamp(entry.timestamp)}
+        </span>
+        <span className="hidden shrink-0 text-gray-500 md:inline">
           {formatLocalTimestamp(entry.timestamp)}
         </span>
         <span
@@ -40,7 +48,9 @@ export function LogRow({ entry }: LogRowProps) {
           {entry.level}
         </span>
         <span className="shrink-0 text-gray-400">{entry.logger}</span>
-        <span className="flex-1 break-words text-gray-900">{entry.message}</span>
+        <span className="w-full break-words text-gray-900 md:w-auto md:flex-1">
+          {entry.message}
+        </span>
         {ctx.map(([label, value]) => (
           <span
             key={label}

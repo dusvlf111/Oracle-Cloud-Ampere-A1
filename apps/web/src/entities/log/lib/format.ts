@@ -31,6 +31,21 @@ export function formatLocalTimestamp(iso: string): string {
   });
 }
 
+/**
+ * Abbreviated timestamp (time only, no date) for narrow/mobile log rows.
+ * Falls back to the raw ISO string for unparseable input.
+ */
+export function formatShortTimestamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
 export const LOG_LEVEL_ORDER: Record<string, number> = {
   DEBUG: 10,
   INFO: 20,

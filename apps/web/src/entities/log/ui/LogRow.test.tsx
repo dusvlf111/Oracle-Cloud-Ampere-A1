@@ -32,6 +32,21 @@ describe("LogRow", () => {
     expect(badge.className).toContain("amber");
   });
 
+  it("renders both a short (mobile) and full (desktop) timestamp", () => {
+    render(<LogRow entry={makeEntry({ timestamp: "2026-06-03T10:30:11.000Z" })} />);
+    // The short variant (time only) and the full local timestamp both exist;
+    // responsive classes hide one at a time at runtime.
+    const seconds = screen.getAllByText(/:\d{2}/);
+    expect(seconds.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("lets the message take full width and wrap on narrow screens", () => {
+    render(<LogRow entry={makeEntry({ message: "a very long log message" })} />);
+    const msg = screen.getByText("a very long log message");
+    expect(msg.className).toContain("break-words");
+    expect(msg.className).toContain("w-full");
+  });
+
   it("uses distinct badge colours per level", () => {
     const { rerender } = render(<LogRow entry={makeEntry({ level: "ERROR" })} />);
     expect(screen.getByTestId("log-level-badge").className).toContain("red");

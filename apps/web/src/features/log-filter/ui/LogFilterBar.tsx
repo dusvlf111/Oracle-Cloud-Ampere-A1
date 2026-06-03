@@ -20,6 +20,8 @@ export interface LogFilterBarProps {
 
 export function LogFilterBar({ value, onChange }: LogFilterBarProps) {
   const [filter, setFilter] = React.useState<LogFilter>(value ?? EMPTY_FILTER);
+  // Collapsed by default on mobile (bottom-sheet style); always expanded from md up.
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const update = React.useCallback(
     (patch: Partial<LogFilter>) => {
@@ -41,7 +43,26 @@ export function LogFilterBar({ value, onChange }: LogFilterBarProps) {
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-3 border-b border-gray-200 p-3">
+    <div className="border-b border-gray-200">
+      {/* Mobile toggle: opens the filter panel as a bottom-sheet-style drawer. */}
+      <button
+        type="button"
+        data-testid="log-filter-toggle"
+        aria-expanded={mobileOpen}
+        onClick={() => setMobileOpen((v) => !v)}
+        className="flex min-h-11 w-full items-center justify-between px-3 text-sm font-medium text-gray-700 md:hidden"
+      >
+        Filters
+        <span aria-hidden>{mobileOpen ? "▴" : "▾"}</span>
+      </button>
+
+      <div
+        data-testid="log-filter-fields"
+        className={cn(
+          "flex-wrap items-end gap-3 p-3 md:flex",
+          mobileOpen ? "flex" : "hidden",
+        )}
+      >
       <div className="flex flex-col gap-1">
         <Label>Levels</Label>
         <div className="flex gap-1" role="group" aria-label="Levels">
@@ -124,6 +145,7 @@ export function LogFilterBar({ value, onChange }: LogFilterBarProps) {
       >
         Reset
       </Button>
+      </div>
     </div>
   );
 }
