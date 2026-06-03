@@ -54,9 +54,9 @@
     - [x] 5.3 자격증명 페이지 — `features/credential-verify` (검증 버튼 → `{ok,error}` 토스트), 자격증명 생성 폼 (multipart: private key 파일 업로드, react-hook-form + zod), 삭제 확인, `pages/credentials` 조합 + 라우트
         - [x] 5.3.T1 vitest 테스트 작성 — 생성 폼 제출 (파일 포함 FormData, MSW 검증), verify 성공/실패 토스트, 삭제 흐름 (user-event 시나리오)
         - [x] 5.3.T2 `pnpm --filter web vitest run src/features/credential-verify src/pages/credentials` 실행 및 검증
-    - [ ] 5.4 알림 채널 페이지 — 채널 CRUD 폼 (타입 선택 시 동적 필드: discord/slack webhook, telegram bot_token/chat_id, ntfy server_url/topic/token/priority/tags — zod discriminated union), `features/channel-test` (테스트 발송 버튼 → ok/error 결과 표시), `pages/channels` 조합 + 라우트
-        - [ ] 5.4.T1 vitest 테스트 작성 — 타입 전환 시 폼 필드 변경, ntfy 채널 생성 제출 페이로드 검증, 테스트 발송 성공/실패 표시 (MSW)
-        - [ ] 5.4.T2 `pnpm --filter web vitest run src/features/channel-test src/pages/channels` 실행 및 검증
+    - [x] 5.4 알림 채널 페이지 — 채널 CRUD 폼 (타입 선택 시 동적 필드: discord/slack webhook, telegram bot_token/chat_id, ntfy server_url/topic/token/priority/tags — zod discriminated union), `features/channel-test` (테스트 발송 버튼 → ok/error 결과 표시), `pages/channels` 조합 + 라우트
+        - [x] 5.4.T1 vitest 테스트 작성 — 타입 전환 시 폼 필드 변경, ntfy 채널 생성 제출 페이로드 검증, 테스트 발송 성공/실패 표시 (MSW)
+        - [x] 5.4.T2 `pnpm --filter web vitest run src/features/channel-test src/pages/channels` 실행 및 검증
     - [ ] 5.5 인스턴스 설정 페이지 — `features/config-create` (전체 폼 필드 + `channel_ids` 멀티 선택, zod 검증), `features/config-toggle` (토글 → optimistic update + 캐시 무효화), `pages/configs` 조합 + 라우트
         - [ ] 5.5.T1 vitest 테스트 작성 — 설정 생성 폼 (필수 필드 검증, channel_ids 선택 포함 제출), 토글 동작 (MSW: enabled 반전 응답), 페이지 통합 시나리오
         - [ ] 5.5.T2 `pnpm --filter web test` + `pnpm --filter web lint` (FSD 위반 없음) 실행 및 검증 — 웹 커버리지 50%+ (features/entities 70%+) 확인
