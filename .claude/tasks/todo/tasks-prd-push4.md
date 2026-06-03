@@ -18,12 +18,33 @@
 
 ---
 
+### 에이전트 실행 전략 (push-lead)
+
+전 작업 `server-worker` 담당 — 단, 파일 영역이 분리되는 두 레인으로 **server-worker 2개 병렬 spawn** 가능:
+
+| 레인 | 작업 | 의존성 |
+|---|---|---|
+| A (도메인/API) | 4.1 → 4.2 → 4.3 → 4.4 → 4.5 | 4.4 는 4.1+4.2+4.3 필요, 4.5 는 4.1 필요 |
+| B (알림) | 4.6 | — (notifier 는 모델/crypto 와 독립 — 복호화된 cfg dict 를 인자로 받음) |
+| 합류 | 4.7 | 4.1 + 4.2 + 4.6 (channels API 가 crypto·notifier 사용) |
+
+```
+[server-worker A] 4.1 → 4.2 → 4.3 → 4.4 → 4.5 ──┬→ 4.7
+[server-worker B] 4.6 ──────────────────────────┘
+```
+
+- **주의**: 두 레인 모두 `services/` 하위지만 파일 비중첩 (`crypto.py`/`oci_client.py` vs `notifier/`) — 충돌 없음. conftest 공용 fixture 변경은 레인 A 가 소유
+- 각 T2 커밋 직전 `test-runner` 검증, 4.7.T2 에서 커버리지 70%+ 게이트
+- 참조 스킬: `fastapi-patterns`, `python-testing`, `oci-sdk` (4.3/4.4), `notification-channels` (4.6/4.7)
+
+---
+
 ## 작업
 
 - [ ] 4.0 서버 도메인 API + 알림 채널 (Push 4)
-    - [ ] 4.1 도메인 모델 + 마이그레이션 — `OciCredential`/`InstanceConfig`/`NotificationChannel`/`ConfigChannelLink`(m2m)/`Attempt`/`AppSetting` SQLModel 정의 (PRD §6) + Alembic revision
-        - [ ] 4.1.T1 pytest 테스트 작성 — `tests/unit/db/test_models.py` (관계 탐색: credential→configs, config↔channels m2m, attempt→config; polyfactory 팩토리 정의)
-        - [ ] 4.1.T2 `pytest -q tests/unit/db/test_models.py` + `alembic upgrade head` 실행 및 검증
+    - [x] 4.1 도메인 모델 + 마이그레이션 — `OciCredential`/`InstanceConfig`/`NotificationChannel`/`ConfigChannelLink`(m2m)/`Attempt`/`AppSetting` SQLModel 정의 (PRD §6) + Alembic revision
+        - [x] 4.1.T1 pytest 테스트 작성 — `tests/unit/db/test_models.py` (관계 탐색: credential→configs, config↔channels m2m, attempt→config; polyfactory 팩토리 정의)
+        - [x] 4.1.T2 `pytest -q tests/unit/db/test_models.py` + `alembic upgrade head` 실행 및 검증
     - [ ] 4.2 crypto 서비스 — `services/crypto.py` (`APP_SECRET` 에서 AES-256-GCM 키 도출, encrypt/decrypt JSON), 마스킹 유틸 (`***` + 마지막 4자, OCID/fingerprint 마스킹)
         - [ ] 4.2.T1 pytest 테스트 작성 — `tests/unit/services/test_crypto.py` (암복호화 라운드트립, 변조 시 복호화 실패, 마스킹 형식)
         - [ ] 4.2.T2 `pytest -q tests/unit/services/test_crypto.py` 실행 및 검증
