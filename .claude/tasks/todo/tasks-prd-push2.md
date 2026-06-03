@@ -47,9 +47,9 @@
     - [x] 2.1 표준 에러 응답 인프라 — `AppError(code, status_code, message, details)` + 전역 exception handler (`{error: {code, message, details, request_id}}`), `RequestIdMiddleware` (ULID 부여 → `request.state` + `X-Request-Id` 헤더), `validation_error`/`internal_error` 핸들러 (PRD §8)
         - [x] 2.1.T1 pytest 테스트 작성 — `tests/api/test_errors.py` (AppError → JSON 스키마 검증, 422 변환, X-Request-Id 헤더 존재/로그 포함)
         - [x] 2.1.T2 `pytest -q tests/api/test_errors.py` 실행 및 검증
-    - [ ] 2.2 auth 서비스 + CLI 헬퍼 — `services/auth.py` (argon2-cffi 해시 검증, env `APP_USERNAME`/`APP_PASSWORD_HASH` 비교), `cli.py` (typer: `hash <password>` → Argon2id 해시 출력)
-        - [ ] 2.2.T1 pytest 테스트 작성 — `tests/unit/services/test_auth.py` (해시 생성→검증 라운드트립, 불일치 거부), CLI 출력 형식 (`$argon2id$` prefix)
-        - [ ] 2.2.T2 `pytest -q tests/unit/services/test_auth.py` 실행 및 검증
+    - [x] 2.2 auth 서비스 + CLI 헬퍼 — `services/auth.py` (argon2-cffi 해시 검증, env `APP_USERNAME`/`APP_PASSWORD_HASH` 비교), `cli.py` (typer: `hash <password>` → Argon2id 해시 출력)
+        - [x] 2.2.T1 pytest 테스트 작성 — `tests/unit/services/test_auth.py` (해시 생성→검증 라운드트립, 불일치 거부), CLI 출력 형식 (`$argon2id$` prefix)
+        - [x] 2.2.T2 `pytest -q tests/unit/services/test_auth.py` 실행 및 검증
     - [ ] 2.3 세션 + 인증 API — `SessionMiddleware` (itsdangerous, HTTP-only, SameSite=Lax, prod Secure), `api/auth.py` (`POST /api/auth/login`, `POST /api/auth/logout` 204, `GET /api/auth/me`), `deps.py` `require_login` (미인증 401 `unauthorized`), `/healthz`·`/api/auth/login` 만 공개
         - [ ] 2.3.T1 pytest 테스트 작성 — `tests/api/test_auth.py` (정상 로그인→Set-Cookie→me 200, 잘못된 비밀번호 401, 로그아웃 후 me 401, 보호 엔드포인트 미인증 401), conftest 에 `authed_client` fixture 추가
         - [ ] 2.3.T2 `pytest -q tests/api/test_auth.py` 실행 및 검증
