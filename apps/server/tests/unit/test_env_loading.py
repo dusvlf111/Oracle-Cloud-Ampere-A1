@@ -2,7 +2,8 @@
 
 Verifies the operational `.env` contract: an explicit env-file path overrides
 defaults, and the bootstrap `cli hash` command still emits a verifiable
-Argon2id hash for APP_PASSWORD_HASH.
+Argon2id hash (manual-recovery helper). Admin credentials are no longer
+env-based — they live in the AppSetting table.
 """
 
 from __future__ import annotations
@@ -19,7 +20,6 @@ def test_settings_load_from_env_file(tmp_path) -> None:
     env.write_text(
         "\n".join(
             [
-                "APP_USERNAME=opsadmin",
                 "APP_SECRET=base64secretvalue==",
                 "DATABASE_URL=sqlite:///./data/app.db",
                 "KEYS_DIR=./data/keys",
@@ -30,7 +30,6 @@ def test_settings_load_from_env_file(tmp_path) -> None:
         encoding="utf-8",
     )
     s = Settings(_env_file=str(env))
-    assert s.app_username == "opsadmin"
     assert s.app_secret == "base64secretvalue=="
     assert s.database_url == "sqlite:///./data/app.db"
     assert s.keys_dir == "./data/keys"
@@ -41,10 +40,10 @@ def test_settings_load_from_env_file(tmp_path) -> None:
 def test_real_env_overrides_env_file(tmp_path, monkeypatch) -> None:
     # Process env must win over the .env file (pydantic-settings precedence).
     env = tmp_path / ".env"
-    env.write_text("APP_USERNAME=fromfile\n", encoding="utf-8")
-    monkeypatch.setenv("APP_USERNAME", "fromenv")
+    env.write_text("OCI_MAX_CONCURRENT=3\n", encoding="utf-8")
+    monkeypatch.setenv("OCI_MAX_CONCURRENT", "9")
     s = Settings(_env_file=str(env))
-    assert s.app_username == "fromenv"
+    assert s.oci_max_concurrent == 9
 
 
 def test_cli_hash_emits_verifiable_argon2id_hash() -> None:

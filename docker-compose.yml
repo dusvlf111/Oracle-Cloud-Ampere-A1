@@ -13,8 +13,6 @@ services:
       #   docker compose -f docker-compose.yml -f docker-compose.full.yml up -d
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/app.db}
       APP_SECRET: ${APP_SECRET}
-      APP_USERNAME: ${APP_USERNAME}
-      APP_PASSWORD_HASH: ${APP_PASSWORD_HASH}
       CORS_ORIGINS: ${CORS_ORIGINS}
       OCI_MAX_CONCURRENT: ${OCI_MAX_CONCURRENT:-10}
       OCI_PER_CREDENTIAL_MAX: ${OCI_PER_CREDENTIAL_MAX:-1}

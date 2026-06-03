@@ -2,7 +2,12 @@
 
 Usage::
 
-    python -m app.cli hash <password>   # → Argon2id hash for APP_PASSWORD_HASH
+    python -m app.cli hash <password>   # → Argon2id hash (manual recovery)
+
+Admin credentials are normally created via the first-signup flow
+(``POST /api/auth/setup``) and stored in the ``AppSetting`` table. This ``hash``
+helper is kept for **manual recovery only** — e.g. to regenerate the
+``admin_password_hash`` row directly in the database if you are locked out.
 """
 
 from __future__ import annotations
@@ -23,7 +28,7 @@ def _main() -> None:
 def hash_cmd(
     password: str = typer.Argument(..., help="Plaintext password to hash"),
 ) -> None:
-    """Print an Argon2id hash to paste into APP_PASSWORD_HASH."""
+    """Print an Argon2id hash (manual recovery: set AppSetting admin_password_hash)."""
     typer.echo(hash_password(password))
 
 
