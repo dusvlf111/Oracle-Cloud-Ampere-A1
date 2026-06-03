@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite:////data/app.db"
 
+    # Filesystem — OCI private keys stored here, chmod 600 (PRD §7.1, §9.1).
+    keys_dir: str = "/data/keys"
+
     # Security
     app_secret: str = ""
     app_username: str = "admin"
