@@ -2,7 +2,7 @@
 
 > PRD: `.claude/tasks/prd.md` (§5 FSD, §7.1/7.2/7.5.2 UI, §8 Orval 흐름, §11 MVP Push 4 웹 파트)
 > Push 범위: 웹 관리 UI — Orval 타입 클라이언트 (`shared/api`), 자격증명/설정/알림 채널 3개 페이지 (FSD: `entities/*` + `features/*` + `pages/*`), 채널 테스트 발송 UI
-> 상태: 🔲 진행 중
+> 상태: ✅ 완료 (2026-06-03)
 
 ---
 
