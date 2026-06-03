@@ -21,18 +21,36 @@
 
 ---
 
+### 에이전트 실행 전략 (push-lead)
+
+| 작업 | 담당 | 의존성 |
+|---|---|---|
+| 3.1 → 3.2 → 3.3 → 3.4 → 3.5 | `server-worker` | 순차 (모델 → 핸들러 → 버스 → API → SSE/pruner) |
+| 3.6 → 3.7 | `web-worker` | — (MSW + EventSource mock 기반, API 계약은 PRD §8 `LogPage`/SSE 스키마 고정) |
+
+```
+[server-worker] 3.1 → 3.2 → 3.3 → 3.4 → 3.5
+[web-worker]    3.6 → 3.7                    (server 체인과 병렬)
+```
+
+- **병렬**: server 체인(3.1~3.5) ∥ web 체인(3.6~3.7) — 파일 영역 분리, 계약은 PRD §8 기준
+- 3.7 완료 후 push-lead 가 실서버 연동 smoke 확인 (SSE rewrite 경유 스트리밍), `test-runner` 최종 게이트
+- 참조 스킬: `fastapi-patterns`, `python-testing` / `fsd-architecture`, `web-testing`
+
+---
+
 ## 작업
 
 - [ ] 3.0 로깅 인프라 + 로그 뷰어 (Push 3)
-    - [ ] 3.1 `LogEntry` 모델 + Alembic 마이그레이션 — timestamp/level/logger 인덱스, `config_id`/`attempt_id`/`credential_id`/`extra`/`exc_info` 컨텍스트 컬럼 (PRD §6)
-        - [ ] 3.1.T1 pytest 테스트 작성 — `tests/unit/db/test_log_entry.py` (생성/인덱스 컬럼 조회), 마이그레이션 up/down 검증
-        - [ ] 3.1.T2 `pytest -q tests/unit/db/` + `alembic upgrade head` 실행 및 검증
-    - [ ] 3.2 `JsonFormatter` + `DbLogHandler` + 로깅 부트스트랩 — `logging_config.py` (stdout JSON 핸들러, DB 동기 INSERT 핸들러, `record.__dict__` 에서 컨텍스트 키 추출, 재귀 방지 필터, `emit()` 예외 격리 `handleError`, 라이브러리 로거 WARNING, env `LOG_LEVEL`/`LOG_LEVEL_DB`)
-        - [ ] 3.2.T1 pytest 테스트 작성 — `tests/unit/test_logging.py` (JSON 출력 스키마, `extra` 컨텍스트 → LogEntry 컬럼 매핑, ERROR 시 exc_info 저장, DB 장애 시 앱 영향 없음, sqlalchemy 로그 재귀 차단)
-        - [ ] 3.2.T2 `pytest -q tests/unit/test_logging.py` 실행 및 검증
-    - [ ] 3.3 `LogBus` + `LogBusHandler` — `log_bus.py` (subscribe 컨텍스트매니저, `put_nowait` + QueueFull 드롭, maxsize 500), 핸들러가 `publish()` 호출, 루트 로거에 3핸들러 부착
-        - [ ] 3.3.T1 pytest 테스트 작성 — `tests/unit/test_log_bus.py` (구독자 수신, 다중 구독자, 가득 찬 큐 드롭, 구독 해제 후 미수신)
-        - [ ] 3.3.T2 `pytest -q tests/unit/test_log_bus.py` 실행 및 검증
+    - [x] 3.1 `LogEntry` 모델 + Alembic 마이그레이션 — timestamp/level/logger 인덱스, `config_id`/`attempt_id`/`credential_id`/`extra`/`exc_info` 컨텍스트 컬럼 (PRD §6)
+        - [x] 3.1.T1 pytest 테스트 작성 — `tests/unit/db/test_log_entry.py` (생성/인덱스 컬럼 조회), 마이그레이션 up/down 검증
+        - [x] 3.1.T2 `pytest -q tests/unit/db/` + `alembic upgrade head` 실행 및 검증
+    - [x] 3.2 `JsonFormatter` + `DbLogHandler` + 로깅 부트스트랩 — `logging_config.py` (stdout JSON 핸들러, DB 동기 INSERT 핸들러, `record.__dict__` 에서 컨텍스트 키 추출, 재귀 방지 필터, `emit()` 예외 격리 `handleError`, 라이브러리 로거 WARNING, env `LOG_LEVEL`/`LOG_LEVEL_DB`)
+        - [x] 3.2.T1 pytest 테스트 작성 — `tests/unit/test_logging.py` (JSON 출력 스키마, `extra` 컨텍스트 → LogEntry 컬럼 매핑, ERROR 시 exc_info 저장, DB 장애 시 앱 영향 없음, sqlalchemy 로그 재귀 차단)
+        - [x] 3.2.T2 `pytest -q tests/unit/test_logging.py` 실행 및 검증
+    - [x] 3.3 `LogBus` + `LogBusHandler` — `log_bus.py` (subscribe 컨텍스트매니저, `put_nowait` + QueueFull 드롭, maxsize 500), 핸들러가 `publish()` 호출, 루트 로거에 3핸들러 부착
+        - [x] 3.3.T1 pytest 테스트 작성 — `tests/unit/test_log_bus.py` (구독자 수신, 다중 구독자, 가득 찬 큐 드롭, 구독 해제 후 미수신)
+        - [x] 3.3.T2 `pytest -q tests/unit/test_log_bus.py` 실행 및 검증
     - [ ] 3.4 로그 조회/삭제 API — `GET /api/logs` (levels 멀티/logger prefix/config_id/since/until/q LIKE/limit + base64 cursor 페이지네이션 → `LogPage{items, next_cursor, has_more}`), `DELETE /api/logs?before=<iso>` 204 (PRD §8)
         - [ ] 3.4.T1 pytest 테스트 작성 — `tests/api/test_logs.py` (필터 조합, 커서 연속 조회, 검색, 삭제 후 미조회, 미인증 401)
         - [ ] 3.4.T2 `pytest -q tests/api/test_logs.py` 실행 및 검증
