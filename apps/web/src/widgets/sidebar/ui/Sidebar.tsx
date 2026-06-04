@@ -6,17 +6,21 @@ import {
   ListChecks,
   Bell,
   ScrollText,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
+import { useSession } from "@/entities/user";
 import { cn } from "@/shared";
 
 export interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** When true, only rendered for an admin session (PRD §6.1). */
+  adminOnly?: boolean;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -25,16 +29,19 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/configs", label: "Configs", icon: ListChecks },
   { href: "/channels", label: "Channels", icon: Bell },
   { href: "/logs", label: "Logs", icon: ScrollText },
+  { href: "/users", label: "유저 관리", icon: Users, adminOnly: true },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { isAdmin } = useSession();
+  const items = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
   return (
     <>
       <span className="px-2 pb-2 text-sm font-semibold text-gray-700">
         OCI Ampere A1
       </span>
-      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      {items.map(({ href, label, icon: Icon }) => {
         const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
         return (
           <Link
