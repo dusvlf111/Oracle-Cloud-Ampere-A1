@@ -17,13 +17,15 @@ import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, Response, UploadFile
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 from sqlmodel import Session, select
 
 from app.api.deps import AppError, require_login
 from app.config import get_settings
 from app.db.models import OciCredential
 from app.db.session import get_session
-from app.schemas.credential import CredentialRead, VerifyResponse
+from app.schemas.credential import CredentialCreate, CredentialRead, VerifyResponse
 from app.services import oci_client
 from app.services.crypto import decrypt, encrypt
 
@@ -69,13 +71,29 @@ async def create_credential(
     _user: str = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> CredentialRead:
+    # Validate + normalise the multipart Form fields. The credentials route is
+    # multipart (PEM upload) so it does not go through a Pydantic body; we run
+    # the same rules manually and re-raise as RequestValidationError so the
+    # global handler emits the 422 ``validation_error`` envelope with per-field
+    # details (hardening §1).
+    try:
+        payload = CredentialCreate(
+            name=name,
+            tenancy_ocid=tenancy_ocid,
+            user_ocid=user_ocid,
+            fingerprint=fingerprint,
+            region=region,
+        )
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc
+
     # Persist first to obtain the id used in the key file name.
     cred = OciCredential(
-        name=name,
-        tenancy_ocid=tenancy_ocid,
-        user_ocid=user_ocid,
-        fingerprint=fingerprint,
-        region=region,
+        name=payload.name,
+        tenancy_ocid=payload.tenancy_ocid,
+        user_ocid=payload.user_ocid,
+        fingerprint=payload.fingerprint,
+        region=payload.region,
         private_key_path="",  # set after we know the id
         passphrase_enc=encrypt((passphrase or "").encode()) if passphrase else None,
     )

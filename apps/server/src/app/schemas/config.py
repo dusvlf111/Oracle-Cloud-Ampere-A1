@@ -9,17 +9,83 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.db.models import InstanceConfig
+from app.services.validators import (
+    IMAGE_OCID_RE,
+    SSH_PUBLIC_KEY_RE,
+    SUBNET_OCID_RE,
+    normalize_ssh_key,
+    normalize_str,
+    validate_pattern,
+)
 
 
-class ConfigCreate(BaseModel):
+class _ConfigValidators:
+    """Shared field validators for create/update (hardening §1).
+
+    Strips whitespace + internal newlines from every str field, validates the
+    image/subnet OCID prefixes, requires a non-blank availability domain, and
+    checks the SSH public key shape after joining wrapped lines.
+    """
+
+    @field_validator(
+        "name",
+        "shape",
+        "image_ocid",
+        "subnet_ocid",
+        "availability_domain",
+        mode="before",
+    )
+    @classmethod
+    def _strip(cls, v: object) -> object:
+        return normalize_str(v)
+
+    @field_validator("ssh_public_key", mode="before")
+    @classmethod
+    def _strip_ssh(cls, v: object) -> object:
+        return normalize_ssh_key(v)
+
+    @field_validator("image_ocid")
+    @classmethod
+    def _image(cls, v: str) -> str:
+        return validate_pattern(
+            v, IMAGE_OCID_RE, "image_ocid must start with 'ocid1.image.'"
+        )
+
+    @field_validator("subnet_ocid")
+    @classmethod
+    def _subnet(cls, v: str) -> str:
+        return validate_pattern(
+            v, SUBNET_OCID_RE, "subnet_ocid must start with 'ocid1.subnet.'"
+        )
+
+    @field_validator("availability_domain")
+    @classmethod
+    def _ad(cls, v: str) -> str:
+        if not v:
+            raise ValueError("availability_domain must not be blank")
+        return v
+
+    @field_validator("ssh_public_key")
+    @classmethod
+    def _ssh(cls, v: str) -> str:
+        return validate_pattern(
+            v,
+            SSH_PUBLIC_KEY_RE,
+            "ssh_public_key must be a single-line OpenSSH public key "
+            "(ssh-rsa / ssh-ed25519 / ecdsa-sha2-*)",
+        )
+
+
+class ConfigCreate(_ConfigValidators, BaseModel):
     name: str
     credential_id: int
     shape: str = "VM.Standard.A1.Flex"
-    ocpus: int = Field(default=4, ge=1)
-    memory_gb: int = Field(default=24, ge=1)
+    # A1 Free Tier limits: 1–4 OCPUs, 1–24 GB memory.
+    ocpus: int = Field(default=4, ge=1, le=4)
+    memory_gb: int = Field(default=24, ge=1, le=24)
     boot_volume_gb: int = Field(default=50, ge=1)
     image_ocid: str
     subnet_ocid: str
@@ -30,12 +96,12 @@ class ConfigCreate(BaseModel):
     channel_ids: list[int] = Field(default_factory=list)
 
 
-class ConfigUpdate(BaseModel):
+class ConfigUpdate(_ConfigValidators, BaseModel):
     name: str
     credential_id: int
     shape: str
-    ocpus: int = Field(ge=1)
-    memory_gb: int = Field(ge=1)
+    ocpus: int = Field(ge=1, le=4)
+    memory_gb: int = Field(ge=1, le=24)
     boot_volume_gb: int = Field(ge=1)
     image_ocid: str
     subnet_ocid: str

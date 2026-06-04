@@ -32,7 +32,7 @@ async def _create_credential(client: AsyncClient, name: str = "main") -> int:
         "name": name,
         "tenancy_ocid": "ocid1.tenancy.oc1..aaaaaaaatenancy",
         "user_ocid": "ocid1.user.oc1..aaaaaaaauser",
-        "fingerprint": "ab:cd:ef:12:34:56",
+        "fingerprint": "ab:cd:ef:12:34:56:78:90:ab:cd:ef:12:34:56:78:90",
         "region": "ap-chuncheon-1",
     }
     files = {
