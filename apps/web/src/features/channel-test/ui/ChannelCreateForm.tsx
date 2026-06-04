@@ -12,6 +12,7 @@ import {
 } from "@/entities/channel";
 import { Button, Input, Label, isApiError } from "@/shared";
 
+import { joinNtfyUrl } from "../lib/ntfyUrl";
 import {
   channelCreateSchema,
   channelEditSchema,
@@ -40,7 +41,7 @@ function defaultsForType(type: string): ChannelCreateValues["config"] {
     case "telegram":
       return { type: "telegram", bot_token: "", chat_id: "" };
     default:
-      return { type: "ntfy", server_url: "", topic: "", priority: 3 };
+      return { type: "ntfy", url: "", token: "", priority: "", tags: "" };
   }
 }
 
@@ -70,10 +71,13 @@ function defaultsFromChannel(ch: Channel): ChannelCreateValues {
         ...base,
         config: {
           type: "ntfy",
-          server_url: String(cfg.server_url ?? ""),
-          topic: String(cfg.topic ?? ""),
+          // Join the stored server_url + topic back into one URL line.
+          url: joinNtfyUrl(
+            String(cfg.server_url ?? ""),
+            String(cfg.topic ?? ""),
+          ),
           token: cfg.token ? String(cfg.token) : "",
-          priority: typeof cfg.priority === "number" ? cfg.priority : 3,
+          priority: typeof cfg.priority === "number" ? cfg.priority : "",
           tags: Array.isArray(cfg.tags) ? cfg.tags.join(", ") : "",
         },
       };
@@ -108,6 +112,18 @@ export function ChannelCreateForm({
   });
 
   const type = watch("config.type");
+
+  // Open the advanced ntfy section by default only when editing a channel that
+  // already has an advanced value set; otherwise keep it collapsed.
+  const advancedOpen = React.useMemo(() => {
+    if (!isEdit || !initial || initial.type !== "ntfy") return false;
+    const cfg = (initial.config ?? {}) as Record<string, unknown>;
+    return Boolean(
+      cfg.token ||
+        typeof cfg.priority === "number" ||
+        (Array.isArray(cfg.tags) && cfg.tags.length > 0),
+    );
+  }, [isEdit, initial]);
 
   const onTypeChange = (next: string) => {
     // Reset the config sub-object so stale fields don't fail validation.
@@ -216,41 +232,53 @@ export function ChannelCreateForm({
       {type === "ntfy" && (
         <>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="server_url">Server URL</Label>
-            <Input id="server_url" {...register("config.server_url")} />
-            {configErrors?.server_url && (
-              <p role="alert" className="text-sm text-red-600">
-                {configErrors.server_url.message}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="topic">Topic</Label>
-            <Input id="topic" {...register("config.topic")} />
-            {configErrors?.topic && (
-              <p role="alert" className="text-sm text-red-600">
-                {configErrors.topic.message}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="token">Token (optional){secretHint}</Label>
-            <Input id="token" {...register("config.token")} />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="priority">Priority (1–5)</Label>
+            <Label htmlFor="ntfy_url">ntfy URL</Label>
             <Input
-              id="priority"
-              type="number"
-              min={1}
-              max={5}
-              {...register("config.priority")}
+              id="ntfy_url"
+              placeholder="https://ntfy.sh/내-토픽"
+              {...register("config.url")}
             />
+            <p className="text-xs text-gray-500">서버주소/토픽</p>
+            {configErrors?.url && (
+              <p role="alert" className="text-sm text-red-600">
+                {configErrors.url.message}
+              </p>
+            )}
           </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="tags">Tags (comma-separated)</Label>
-            <Input id="tags" {...register("config.tags")} />
-          </div>
+
+          <details className="rounded border border-gray-200" open={advancedOpen}>
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-gray-700">
+              고급 설정
+            </summary>
+            <div className="flex flex-col gap-3 px-3 pb-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="token">Token (optional){secretHint}</Label>
+                <Input id="token" {...register("config.token")} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="priority">Priority (1–5)</Label>
+                <Input
+                  id="priority"
+                  type="number"
+                  min={1}
+                  max={5}
+                  {...register("config.priority")}
+                />
+                <p className="text-xs text-gray-500">
+                  비워두면 자동 (성공 5 / 오류 4)
+                </p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="tags">Tags (comma-separated)</Label>
+                <Input id="tags" {...register("config.tags")} />
+              </div>
+            </div>
+          </details>
+
+          <p className="text-xs text-gray-500">
+            참고: 이 URL 로 POST 만 해도 알림이 갑니다 — curl -d &apos;테스트&apos;
+            &lt;URL&gt;
+          </p>
         </>
       )}
 
