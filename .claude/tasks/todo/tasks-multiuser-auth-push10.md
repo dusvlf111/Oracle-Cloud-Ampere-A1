@@ -41,9 +41,9 @@
     - [x] 10.1 클라이언트 재생성 + 유저 엔티티 — `node scripts/sync-api.mjs` (register/users/me 훅), `entities/user` (status: pending/active/disabled 배지, role 표시), me 확장(`{username, role, status}`) 반영 — 세션 컨텍스트에 role 노출
         - [x] 10.1.T1 vitest 테스트 작성 — 유저 status/role 배지 렌더, me 훅 role 파싱 (MSW)
         - [x] 10.1.T2 `pnpm --filter web vitest run src/entities/user` + tsc 실행 및 검증
-    - [ ] 10.2 가입 플로우 — `features/auth-register`: 최초 가입(needs_setup) 은 기존 "관리자 계정 생성" 동작 유지, 이후 가입은 "가입 신청" → 성공 시 "승인 대기 중입니다" 안내 화면 (세션 없음). `features/auth-login`: 403 `account_pending`("관리자 승인 대기 중") / `account_disabled`("비활성화된 계정") 에러 메시지 분기
-        - [ ] 10.2.T1 vitest 테스트 작성 — 가입 신청→대기 안내, 최초 가입→자동 로그인 리다이렉트 회귀, 로그인 403 두 코드별 메시지 (MSW)
-        - [ ] 10.2.T2 `pnpm --filter web vitest run src/features/auth-register src/features/auth-login src/pages/login` 실행 및 검증
+    - [x] 10.2 가입 플로우 — `features/auth-register`: 최초 가입(needs_setup) 은 기존 "관리자 계정 생성" 동작 유지, 이후 가입은 "가입 신청" → 성공 시 "승인 대기 중입니다" 안내 화면 (세션 없음). `features/auth-login`: 403 `account_pending`("관리자 승인 대기 중") / `account_disabled`("비활성화된 계정") 에러 메시지 분기
+        - [x] 10.2.T1 vitest 테스트 작성 — 가입 신청→대기 안내, 최초 가입→자동 로그인 리다이렉트 회귀, 로그인 403 두 코드별 메시지 (MSW)
+        - [x] 10.2.T2 `pnpm --filter web vitest run src/features/auth-register src/features/auth-login src/pages/login` 실행 및 검증
     - [ ] 10.3 유저 관리 페이지 (admin) — `pages/users` + `features/user-approve`: 목록 테이블 (pending 상단 정렬 + 뱃지), 행별 승인/거부/비활성/활성 버튼 (거부는 확인 모달), 액션 후 캐시 무효화. 모바일 카드 전환 (기존 패턴)
         - [ ] 10.3.T1 vitest 테스트 작성 — 목록 렌더, 승인 클릭→PATCH 요청+목록 갱신, 거부 확인 모달, 비활성 (MSW)
         - [ ] 10.3.T2 `pnpm --filter web vitest run src/pages/users src/features/user-approve` 실행 및 검증

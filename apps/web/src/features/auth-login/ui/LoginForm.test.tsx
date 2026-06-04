@@ -50,6 +50,46 @@ describe("LoginForm", () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
+  it("shows the pending message on 403 account_pending", async () => {
+    server.use(
+      http.post(LOGIN, () =>
+        HttpResponse.json(
+          errorEnvelope("account_pending", "Account awaiting admin approval"),
+          { status: 403 },
+        ),
+      ),
+    );
+    const onSuccess = vi.fn();
+    const user = userEvent.setup();
+    render(<LoginForm onSuccess={onSuccess} />);
+
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText(/관리자 승인 대기 중입니다/)).toBeInTheDocument();
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it("shows the disabled message on 403 account_disabled", async () => {
+    server.use(
+      http.post(LOGIN, () =>
+        HttpResponse.json(
+          errorEnvelope("account_disabled", "Account has been disabled"),
+          { status: 403 },
+        ),
+      ),
+    );
+    const onSuccess = vi.fn();
+    const user = userEvent.setup();
+    render(<LoginForm onSuccess={onSuccess} />);
+
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText(/비활성화된 계정입니다/)).toBeInTheDocument();
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
   it("shows a rate-limit message on 429 with retry_after_sec", async () => {
     server.use(
       http.post(LOGIN, () =>

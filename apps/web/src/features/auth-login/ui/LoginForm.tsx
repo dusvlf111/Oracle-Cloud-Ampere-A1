@@ -25,6 +25,12 @@ function messageForError(err: unknown): string {
     if (err.code === "unauthorized") {
       return "Invalid username or password.";
     }
+    if (err.code === "account_pending") {
+      return "관리자 승인 대기 중입니다.";
+    }
+    if (err.code === "account_disabled") {
+      return "비활성화된 계정입니다. 관리자에게 문의하세요.";
+    }
     return err.message;
   }
   return "Something went wrong. Please try again.";

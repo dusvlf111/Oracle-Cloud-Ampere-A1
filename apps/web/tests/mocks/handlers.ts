@@ -17,6 +17,15 @@ export const handlers = [
     HttpResponse.json({ needs_setup: false }),
   ),
 
+  // Default session probe (sidebar/users role gating, PRD §6.1). Per-test
+  // suites override with an admin/user/pending session as needed.
+  http.get(`${API}/auth/me`, () =>
+    HttpResponse.json({ username: "admin", role: "admin", status: "active" }),
+  ),
+
+  // Default user list (admin only). Override per-test with seeded rows.
+  http.get(`${API}/users`, () => HttpResponse.json([])),
+
   http.get(`${API}/credentials`, () => HttpResponse.json([])),
   http.get(`${API}/configs`, () => HttpResponse.json([])),
   http.get(`${API}/channels`, () => HttpResponse.json([])),
