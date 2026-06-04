@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { CheckCircle2, Check, Copy } from "lucide-react";
 import * as React from "react";
 
 import { AttemptsTable, useAttempts } from "@/entities/attempt";
@@ -82,8 +82,9 @@ export function DashboardPage() {
           data-testid="success-card"
           className="rounded border border-green-200 bg-green-50 px-4 py-3"
         >
-          <h2 className="text-sm font-semibold text-green-800">
-            ✅ 최근 생성된 인스턴스
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-green-800">
+            <CheckCircle2 aria-hidden className="h-4 w-4" />
+            최근 생성된 인스턴스
           </h2>
           <dl className="mt-2 grid grid-cols-1 gap-1 text-sm text-green-900 sm:grid-cols-2">
             <div className="sm:col-span-2">

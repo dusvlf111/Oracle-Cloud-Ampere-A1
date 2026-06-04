@@ -1,5 +1,7 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
+
 import * as React from "react";
 
 import { AttemptStatusBadge } from "@/entities/attempt";
@@ -83,7 +85,10 @@ export function PollingStatus() {
 
   return (
     <section data-testid="polling-status" className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-700">🔄 폴링 중인 설정</h2>
+      <h2 className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+        <RefreshCw aria-hidden className="h-4 w-4 text-gray-400" />
+        폴링 중인 설정
+      </h2>
       {items.length > 0 ? (
         <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {items.map((item) => (

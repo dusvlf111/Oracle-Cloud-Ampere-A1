@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronDown, ChevronUp, ClipboardPaste } from "lucide-react";
+
 import * as React from "react";
 
 import { Button, Label } from "@/shared";
@@ -15,7 +17,7 @@ const TEXTAREA_CLASS =
   "min-h-28 w-full rounded border border-gray-300 bg-white px-3 py-2 font-mono text-base sm:text-sm";
 
 /**
- * Collapsible "📋 구성 파일 붙여넣기" area (Task C). The user pastes the ini
+ * Collapsible "구성 파일 붙여넣기" area (Task C). The user pastes the ini
  * block Oracle's console shows; on apply (or paste) we parse it and prefill the
  * credential form's OCID / fingerprint / region fields. The key_file line is
  * ignored with a hint that the PEM is uploaded below.
@@ -49,9 +51,12 @@ export function OciConfigPaste({ onParsed }: OciConfigPasteProps) {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        <span>📋 구성 파일 붙여넣기</span>
+        <span className="flex items-center gap-1.5">
+          <ClipboardPaste aria-hidden className="h-4 w-4 text-gray-400" />
+          구성 파일 붙여넣기
+        </span>
         <span aria-hidden className="text-gray-500">
-          {open ? "▲" : "▼"}
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
       </button>
 
