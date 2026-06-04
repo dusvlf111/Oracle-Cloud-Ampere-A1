@@ -1,9 +1,10 @@
-"""Credentials API tests (PRD §7.1, §8). OCI fully mocked."""
+"""Credentials API tests (PRD §7.1, §8). OCI fully mocked.
+
+Push 11: private keys are Fernet-encrypted in ``private_key_enc`` (no file on
+disk). The plaintext PEM only lives in memory during upload / verify.
+"""
 
 from __future__ import annotations
-
-import os
-import stat
 
 import pytest
 from httpx import AsyncClient
@@ -11,19 +12,17 @@ from httpx import AsyncClient
 from app.config import Settings
 from app.services import crypto, oci_client
 
+_PLAINTEXT_PEM = b"-----BEGIN KEY-----\nabc\n-----END KEY-----"
+
 
 @pytest.fixture
 def cred_settings(tmp_path, monkeypatch: pytest.MonkeyPatch) -> Settings:
-    """Wire up keys_dir + app_secret across the modules that read settings."""
-    keys = tmp_path / "keys"
-    settings = Settings(
-        app_secret="api-test-secret",
-        keys_dir=str(keys),
-    )
+    """Wire up app_secret across the modules that read settings."""
+    settings = Settings(app_secret="api-test-secret")
     monkeypatch.setattr("app.config.get_settings", lambda: settings)
-    monkeypatch.setattr("app.api.credentials.get_settings", lambda: settings)
     monkeypatch.setattr(crypto, "get_settings", lambda: settings)
     crypto._key_for.cache_clear()
+    crypto._fernet_key_for.cache_clear()
     return settings
 
 
@@ -40,7 +39,7 @@ async def _create(client: AsyncClient, **overrides):
     }
     if "passphrase" in overrides:
         data["passphrase"] = overrides["passphrase"]
-    files = {"private_key": ("oci.pem", b"-----BEGIN KEY-----\nabc\n-----END KEY-----", "application/x-pem-file")}
+    files = {"private_key": ("oci.pem", _PLAINTEXT_PEM, "application/x-pem-file")}
     return await client.post("/api/credentials", data=data, files=files)
 
 
@@ -49,9 +48,11 @@ async def test_requires_auth(client: AsyncClient, cred_settings) -> None:
     assert resp.status_code == 401
 
 
-async def test_create_writes_key_file_0600_and_masks(
-    authed_db_client: AsyncClient, cred_settings
+async def test_create_encrypts_key_to_db_and_masks(
+    authed_db_client: AsyncClient, cred_settings, session
 ) -> None:
+    from app.db.models import OciCredential
+
     resp = await _create(authed_db_client, passphrase="secret-pp")
     assert resp.status_code == 201, resp.text
     body = resp.json()
@@ -62,11 +63,16 @@ async def test_create_writes_key_file_0600_and_masks(
     assert body["tenancy_ocid"].endswith("***")
     assert "tenancy" not in body["tenancy_ocid"] or body["tenancy_ocid"] != "ocid1.tenancy.oc1..aaaaaaaatenancy"
     assert body["fingerprint"].startswith("ab:cd:**")
+    # The PEM is never echoed back in the response (no key field at all).
+    assert "private_key" not in body
+    assert "private_key_enc" not in body
 
-    key_path = cred_settings.keys_dir + f"/{body['id']}.pem"
-    assert os.path.exists(key_path)
-    mode = stat.S_IMODE(os.stat(key_path).st_mode)
-    assert mode == 0o600
+    # Stored as a Fernet token (not plaintext) that decrypts back to the PEM.
+    row = session.get(OciCredential, body["id"])
+    session.refresh(row)
+    assert row.private_key_enc
+    assert _PLAINTEXT_PEM.decode() not in row.private_key_enc
+    assert crypto.fernet_decrypt(row.private_key_enc).encode() == _PLAINTEXT_PEM
 
 
 async def test_create_without_passphrase(
@@ -132,6 +138,39 @@ async def test_verify_unexpected_exception_converges_to_ok_false(
     assert body["error"]
 
 
+async def test_verify_uses_key_content_not_file(
+    authed_db_client: AsyncClient, cred_settings, oci_mock
+) -> None:
+    """verify builds the OCI config from the decrypted PEM (key_content)."""
+    created = (await _create(authed_db_client, passphrase="pp")).json()
+    resp = await authed_db_client.post(f"/api/credentials/{created['id']}/verify")
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    # The config handed to the SDK carried key_content (PEM in memory), no file.
+    cfg = oci_mock.call_args.args[0]
+    assert cfg["key_content"] == _PLAINTEXT_PEM.decode()
+    assert "key_file" not in cfg
+
+
+async def test_verify_missing_key_converges_to_ok_false(
+    authed_db_client: AsyncClient, cred_settings, oci_mock, session
+) -> None:
+    """A credential whose key was missing at migration (empty enc) → ok: false."""
+    from app.db.models import OciCredential
+
+    created = (await _create(authed_db_client)).json()
+    row = session.get(OciCredential, created["id"])
+    row.private_key_enc = ""  # simulate missing-at-migration
+    session.add(row)
+    session.commit()
+
+    resp = await authed_db_client.post(f"/api/credentials/{created['id']}/verify")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is False
+    assert body["error"]
+
+
 async def test_verify_not_found(
     authed_db_client: AsyncClient, cred_settings
 ) -> None:
@@ -164,13 +203,14 @@ async def _update(client: AsyncClient, credential_id: int, *, with_key: bool, **
     )
 
 
-async def test_update_without_key_keeps_existing_file(
-    authed_db_client: AsyncClient, cred_settings
+async def test_update_without_key_keeps_existing_enc(
+    authed_db_client: AsyncClient, cred_settings, session
 ) -> None:
-    """PUT without a re-uploaded key keeps the existing key file untouched."""
+    """PUT without a re-uploaded key keeps the stored encrypted key untouched."""
+    from app.db.models import OciCredential
+
     created = (await _create(authed_db_client)).json()
-    key_path = cred_settings.keys_dir + f"/{created['id']}.pem"
-    original = open(key_path, "rb").read()
+    before = session.get(OciCredential, created["id"]).private_key_enc
 
     resp = await _update(
         authed_db_client, created["id"], with_key=False, name="renamed"
@@ -179,21 +219,28 @@ async def test_update_without_key_keeps_existing_file(
     body = resp.json()
     assert body["name"] == "renamed"
     assert body["region"] == "ap-seoul-1"
-    # File on disk is unchanged.
-    assert open(key_path, "rb").read() == original
+    # Stored ciphertext is unchanged.
+    row = session.get(OciCredential, created["id"])
+    session.refresh(row)
+    assert row.private_key_enc == before
 
 
-async def test_update_with_key_overwrites_file_0600(
-    authed_db_client: AsyncClient, cred_settings
+async def test_update_with_key_re_encrypts(
+    authed_db_client: AsyncClient, cred_settings, session
 ) -> None:
+    from app.db.models import OciCredential
+
     created = (await _create(authed_db_client)).json()
-    key_path = cred_settings.keys_dir + f"/{created['id']}.pem"
+    before = session.get(OciCredential, created["id"]).private_key_enc
 
     resp = await _update(authed_db_client, created["id"], with_key=True)
     assert resp.status_code == 200, resp.text
-    assert b"NEWKEY" in open(key_path, "rb").read()
-    mode = stat.S_IMODE(os.stat(key_path).st_mode)
-    assert mode == 0o600
+    row = session.get(OciCredential, created["id"])
+    session.refresh(row)
+    assert row.private_key_enc != before  # re-encrypted
+    assert crypto.fernet_decrypt(row.private_key_enc) == (
+        "-----BEGIN KEY-----\nNEWKEY\n-----END KEY-----"
+    )
 
 
 async def test_update_blank_passphrase_keeps_existing(
@@ -279,20 +326,17 @@ async def test_update_not_found(
     assert resp.json()["error"]["code"] == "credential_not_found"
 
 
-async def test_delete_removes_key_file(
+async def test_delete_removes_credential(
     authed_db_client: AsyncClient, cred_settings
 ) -> None:
     created = (await _create(authed_db_client)).json()
-    key_path = cred_settings.keys_dir + f"/{created['id']}.pem"
-    assert os.path.exists(key_path)
 
     resp = await authed_db_client.request(
         "DELETE", f"/api/credentials/{created['id']}"
     )
     assert resp.status_code == 204
-    assert not os.path.exists(key_path)
 
-    # gone
+    # gone — no file cleanup needed (key was only in the encrypted DB column).
     resp2 = await authed_db_client.post(f"/api/credentials/{created['id']}/verify")
     assert resp2.status_code == 404
 

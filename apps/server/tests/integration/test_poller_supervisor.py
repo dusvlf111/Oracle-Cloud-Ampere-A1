@@ -51,7 +51,7 @@ def _cred(session: Session, name="acct") -> OciCredential:
         user_ocid="ocid1.user..b",
         fingerprint="ab:cd",
         region="ap-chuncheon-1",
-        private_key_path="/data/keys/x.pem",
+        private_key_enc="enc",
         owner_id=_owner(session, f"owner-{name}"),
     )
     session.add(c)

@@ -20,29 +20,46 @@ from app.services.oci_client import (
     verify,
 )
 
+_PEM = "-----BEGIN KEY-----\npem-body\n-----END KEY-----\n"
+
 CRED = {
     "id": 1,
     "tenancy_ocid": "ocid1.tenancy.oc1..aaa",
     "user_ocid": "ocid1.user.oc1..bbb",
     "fingerprint": "ab:cd:ef:12:34",
     "region": "ap-chuncheon-1",
-    "private_key_path": "/data/keys/1.pem",
+    "key_content": _PEM,
 }
 
 
-def test_build_config_uses_key_file_and_passphrase() -> None:
+def test_build_config_uses_key_content_and_passphrase() -> None:
     cfg = build_config(CRED, passphrase="pw")
     assert cfg["tenancy"] == CRED["tenancy_ocid"]
     assert cfg["user"] == CRED["user_ocid"]
     assert cfg["fingerprint"] == CRED["fingerprint"]
     assert cfg["region"] == CRED["region"]
-    assert cfg["key_file"] == "/data/keys/1.pem"
+    # PEM passed in memory, never a file path.
+    assert cfg["key_content"] == _PEM
+    assert "key_file" not in cfg
     assert cfg["pass_phrase"] == "pw"
+
+
+def test_build_config_explicit_key_content_overrides_cred() -> None:
+    cfg = build_config(CRED, key_content="OTHER-PEM")
+    assert cfg["key_content"] == "OTHER-PEM"
 
 
 def test_build_config_no_passphrase_omits_field() -> None:
     cfg = build_config(CRED)
     assert "pass_phrase" not in cfg
+
+
+def test_build_config_missing_key_raises() -> None:
+    import pytest
+
+    bad = {k: v for k, v in CRED.items() if k != "key_content"}
+    with pytest.raises(KeyError):
+        build_config(bad)
 
 
 def _svc_error(status: int, code: str, message: str) -> oci_exceptions.ServiceError:

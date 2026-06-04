@@ -27,6 +27,9 @@ services:
       # Redis rate-limit storage (empty = in-memory; full mode wires redis).
       REDIS_URL: ${REDIS_URL:-}
     volumes:
+      # Persists ONLY the SQLite DB (/data/app.db) in simple mode. As of Push 11
+      # OCI private keys are Fernet-encrypted in the DB (private_key_enc), so no
+      # /data/keys directory is created or needed any more.
       - ./data:/data
     restart: unless-stopped
     healthcheck:

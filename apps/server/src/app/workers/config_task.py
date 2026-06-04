@@ -48,7 +48,7 @@ from tenacity import (
 
 from app.db.models import Attempt, InstanceConfig, NotificationChannel, OciCredential
 from app.services import oci_client
-from app.services.crypto import decrypt
+from app.services.crypto import decrypt, fernet_decrypt
 from app.services.notifier import fan_out
 from app.services.notifier.types import NotificationPayload, NotifyKind
 from app.workers.concurrency import oci_slots
@@ -183,9 +183,12 @@ async def _one_launch(config: InstanceConfig, cred: OciCredential, passphrase: s
         "user_ocid": cred.user_ocid,
         "fingerprint": cred.fingerprint,
         "region": cred.region,
-        "private_key_path": cred.private_key_path,
     }
-    oci_config = oci_client.build_config(cfg_dict, passphrase=passphrase)
+    # Decrypt the PEM into memory only (never logged / written to disk).
+    key_content = fernet_decrypt(cred.private_key_enc) if cred.private_key_enc else ""
+    oci_config = oci_client.build_config(
+        cfg_dict, key_content=key_content, passphrase=passphrase
+    )
     details = oci_client.build_launch_details(config, cred.tenancy_ocid)
 
     @_rate_limit_retry

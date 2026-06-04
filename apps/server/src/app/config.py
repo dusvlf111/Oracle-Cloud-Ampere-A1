@@ -25,7 +25,10 @@ class Settings(BaseSettings):
     db_max_overflow: int = 10
     db_pool_pre_ping: bool = True
 
-    # Filesystem — OCI private keys stored here, chmod 600 (PRD §7.1, §9.1).
+    # DEPRECATED (Push 11): OCI private keys are now Fernet-encrypted in the
+    # ``ocicredential.private_key_enc`` column (PRD §7.1) — nothing is written
+    # to this directory any more. Retained only so older .env files that still
+    # set KEYS_DIR don't fail to load; safe to remove from deployments.
     keys_dir: str = "/data/keys"
 
     # Security — APP_SECRET signs the session cookie and derives the AES-256-GCM

@@ -18,12 +18,11 @@ from app.services import crypto
 
 @pytest.fixture
 def cred_settings(tmp_path, monkeypatch: pytest.MonkeyPatch) -> Settings:
-    keys = tmp_path / "keys"
-    settings = Settings(app_secret="meta-test-secret", keys_dir=str(keys))
+    settings = Settings(app_secret="meta-test-secret")
     monkeypatch.setattr("app.config.get_settings", lambda: settings)
-    monkeypatch.setattr("app.api.credentials.get_settings", lambda: settings)
     monkeypatch.setattr(crypto, "get_settings", lambda: settings)
     crypto._key_for.cache_clear()
+    crypto._fernet_key_for.cache_clear()
     return settings
 
 

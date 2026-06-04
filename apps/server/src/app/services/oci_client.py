@@ -69,20 +69,26 @@ class VerifyResult:
 def build_config(
     cred: dict,
     *,
-    key_file: str | None = None,
+    key_content: str | None = None,
     passphrase: str | None = None,
 ) -> dict:
-    """Build an oci config dict from a credential mapping.
+    """Build an oci config dict from a credential mapping (PRD §7.1).
 
     ``cred`` carries ``tenancy_ocid``/``user_ocid``/``fingerprint``/``region``.
-    ``key_file`` defaults to ``cred['private_key_path']`` (key stays on disk).
+    The private key is passed in memory via ``key_content`` (decrypted PEM
+    string) and mapped to the OCI SDK's ``key_content`` field — the key never
+    touches disk. ``key_content`` defaults to ``cred['key_content']`` when not
+    given explicitly. Raises ``KeyError`` if no key material is available.
     """
+    pem = key_content if key_content is not None else cred.get("key_content")
+    if not pem:
+        raise KeyError("key_content")
     config = {
         "tenancy": cred["tenancy_ocid"],
         "user": cred["user_ocid"],
         "fingerprint": cred["fingerprint"],
         "region": cred["region"],
-        "key_file": key_file or cred["private_key_path"],
+        "key_content": pem,
     }
     if passphrase:
         config["pass_phrase"] = passphrase
@@ -218,11 +224,11 @@ def list_subnets_sync(config: dict) -> list[dict]:
 async def fetch_availability_domains(
     cred: dict,
     *,
-    key_file: str | None = None,
+    key_content: str | None = None,
     passphrase: str | None = None,
 ) -> list[str]:
     """Async wrapper for AD lookup. Raises on OCI failure (caller classifies)."""
-    config = build_config(cred, key_file=key_file, passphrase=passphrase)
+    config = build_config(cred, key_content=key_content, passphrase=passphrase)
     return await asyncio.to_thread(list_availability_domains_sync, config)
 
 
@@ -230,36 +236,36 @@ async def fetch_images(
     cred: dict,
     shape: str,
     *,
-    key_file: str | None = None,
+    key_content: str | None = None,
     passphrase: str | None = None,
 ) -> list[dict]:
     """Async wrapper for image lookup. Raises on OCI failure."""
-    config = build_config(cred, key_file=key_file, passphrase=passphrase)
+    config = build_config(cred, key_content=key_content, passphrase=passphrase)
     return await asyncio.to_thread(list_images_sync, config, shape)
 
 
 async def fetch_subnets(
     cred: dict,
     *,
-    key_file: str | None = None,
+    key_content: str | None = None,
     passphrase: str | None = None,
 ) -> list[dict]:
     """Async wrapper for subnet lookup. Raises on OCI failure."""
-    config = build_config(cred, key_file=key_file, passphrase=passphrase)
+    config = build_config(cred, key_content=key_content, passphrase=passphrase)
     return await asyncio.to_thread(list_subnets_sync, config)
 
 
 async def verify(
     cred: dict,
     *,
-    key_file: str | None = None,
+    key_content: str | None = None,
     passphrase: str | None = None,
 ) -> VerifyResult:
     """Verify a credential by listing availability domains.
 
     Returns a :class:`VerifyResult` — never raises for OCI-level failures.
     """
-    config = build_config(cred, key_file=key_file, passphrase=passphrase)
+    config = build_config(cred, key_content=key_content, passphrase=passphrase)
     try:
         await asyncio.to_thread(_verify_sync, config)
     except Exception as exc:  # noqa: BLE001 — surface as result, not raise

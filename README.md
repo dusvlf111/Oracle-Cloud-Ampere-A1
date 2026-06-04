@@ -118,9 +118,10 @@ cp .env.example .env
 #  - APP_SECRET:  python -c "import secrets,base64;print(base64.b64encode(secrets.token_bytes(32)).decode())"
 #  - APP_PASSWORD_HASH:  cd apps/server && uv run python -m app.cli hash '내비밀번호'
 #       ⚠️ 해시에 $ 가 있으므로 .env 에서 반드시 작은따옴표로 감쌀 것
-#  - 로컬 dev 는 DATABASE_URL=sqlite:///./data/app.db, KEYS_DIR=./data/keys 권장
+#  - 로컬 dev 는 DATABASE_URL=sqlite:///./data/app.db 권장
+#    (KEYS_DIR 은 Push 11 부터 미사용 — OCI private key 는 DB 에 Fernet 암호화 저장)
 
-pnpm dev:server   # data/keys 준비 → alembic upgrade head → uvicorn :8000 (.env 자동 로드)
+pnpm dev:server   # alembic upgrade head → uvicorn :8000 (.env 자동 로드)
 pnpm dev:web      # sync-api(Orval 자동 재생성) → Next.js :3000 (/api 는 rewrites 로 :8000 프록시)
 ```
 
@@ -241,7 +242,7 @@ node scripts/verify-workspace.mjs  # pnpm workspace 구성 확인
 | slowapi | 로그인 rate limit (메모리 backend) | MIT |
 | python-ulid | 요청 ID (ULID) 부여 | MIT |
 | sse-starlette | 로그 실시간 스트림 SSE (`/api/logs/stream`, EventSourceResponse) | BSD-3 |
-| cryptography | AES-256-GCM 암복호화 (passphrase/채널 토큰 `config_enc`) | Apache-2.0 / BSD-3 |
+| cryptography | AES-256-GCM 암복호화 (passphrase/채널 토큰 `config_enc`) + Fernet (OCI private key `private_key_enc`, Push 11) | Apache-2.0 / BSD-3 |
 | tenacity | 알림 발송 재시도/백오프 (httpx 5xx·timeout) | Apache-2.0 |
 | python-multipart | credentials API multipart 폼 + PEM 파일 업로드 | Apache-2.0 |
 | oci | Oracle Cloud 공식 SDK (자격증명 verify, 인스턴스 생성) | UPL-1.0 / Apache-2.0 |
