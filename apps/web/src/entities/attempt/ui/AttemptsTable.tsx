@@ -1,5 +1,6 @@
 "use client";
 
+import { keepPreviousData } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
@@ -24,6 +25,12 @@ const STATUS_OPTIONS: AttemptStatus[] = [
 
 const REFETCH_INTERVAL_MS = 5000;
 const DEFAULT_LIMIT = 50;
+
+// Stable fallback — `data ?? []` inline would mint a NEW array every render,
+// which makes useReactTable re-initialize each time and (while a filter
+// change leaves `data` undefined) spirals into an infinite re-render loop
+// that freezes the page. See TanStack Table "stable data reference" docs.
+const NO_ROWS: Attempt[] = [];
 
 function formatDuration(ms: number | null | undefined): string {
   if (ms == null) return "—";
@@ -81,10 +88,16 @@ export function AttemptsTable({ defaultConfigId }: AttemptsTableProps) {
   };
 
   const { data, isLoading } = useAttempts(params, {
-    query: { refetchInterval: REFETCH_INTERVAL_MS },
+    query: {
+      refetchInterval: REFETCH_INTERVAL_MS,
+      // Keep showing the previous rows while a filter change refetches —
+      // avoids the table collapsing to empty (and re-rendering from scratch)
+      // on every dropdown interaction.
+      placeholderData: keepPreviousData,
+    },
   });
 
-  const rows = data ?? [];
+  const rows = data ?? NO_ROWS;
   const table = useReactTable({
     data: rows,
     columns,
@@ -93,24 +106,27 @@ export function AttemptsTable({ defaultConfigId }: AttemptsTableProps) {
 
   return (
     <div data-testid="attempts-table" className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col text-xs text-gray-600">
+      {/* Mobile: full-width stacked filters, 44px touch targets and 16px font
+          (text-base) so iOS Safari does not auto-zoom on focus. Desktop keeps
+          the compact inline look. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <label className="flex w-full flex-col gap-1 text-xs text-gray-600 sm:w-auto">
           Config ID
           <input
             aria-label="Filter by config id"
             value={configId}
             onChange={(e) => setConfigId(e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            className="min-h-11 w-full rounded border border-gray-300 bg-white px-3 py-2 text-base sm:min-h-0 sm:w-auto sm:px-2 sm:py-1 sm:text-sm"
             inputMode="numeric"
           />
         </label>
-        <label className="flex flex-col text-xs text-gray-600">
+        <label className="flex w-full flex-col gap-1 text-xs text-gray-600 sm:w-auto">
           Status
           <select
             aria-label="Filter by status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            className="min-h-11 w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-base sm:min-h-0 sm:w-auto sm:appearance-auto sm:px-2 sm:py-1 sm:text-sm"
           >
             <option value="">All</option>
             {STATUS_OPTIONS.map((s) => (
