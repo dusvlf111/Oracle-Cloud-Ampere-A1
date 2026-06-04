@@ -3,7 +3,7 @@
 > PRD: `.claude/tasks/todo/prd-multiuser-auth.md` (§7 OCI Private Key DB 암호화)
 > Push 범위: 서버 — OCI private key 를 파일 저장 → Fernet DB 암호화로 전환, `key_content` 메모리 전달, 파일 마이그레이션, CORS 회귀 테스트
 > 선행 조건: 없음 (Push 9 와 독립 — 단 9 가 먼저 머지됐다면 그 위에서 분기)
-> 상태: 🔲 진행 중
+> 상태: ✅ 완료
 
 ---
 
@@ -36,7 +36,7 @@
 
 ## 작업
 
-- [ ] 11.0 OCI 키 DB 암호화 (Push 11)
+- [x] 11.0 OCI 키 DB 암호화 (Push 11)
     - [x] 11.1 Fernet 유틸 — `crypto.py` 에 `fernet_encrypt/fernet_decrypt` (키: `APP_SECRET` 에서 HKDF-SHA256 도출, 기존 AES-GCM 와 병존), 타입힌트+docstring
         - [x] 11.1.T1 pytest 테스트 작성 — 라운드트립, 변조 토큰 거부, AES-GCM 유틸 회귀
         - [x] 11.1.T2 `uv run pytest -q tests/unit/services/test_crypto_fernet.py tests/unit/services/test_crypto.py` 실행 및 검증
@@ -46,6 +46,6 @@
     - [x] 11.3 호출부 전환 — `oci_client.build_config` 가 `key_content` (복호화 PEM 문자열) 사용 (파일 경로 제거), `api/credentials.py` 업로드 → Fernet 암호화 저장 + PUT 재업로드 동일 처리, 삭제 시 파일 정리 로직 제거, `keys_dir` 설정 deprecated
         - [x] 11.3.T1 pytest 테스트 작성 — 생성→DB 에 Fernet 토큰만 (평문/파일 없음), verify/launch 가 key_content 로 동작 (oci mock), PUT 키 재업로드/유지, 응답 무노출
         - [x] 11.3.T2 `uv run pytest -q tests/api/test_credentials.py tests/unit/services/test_oci_client.py tests/unit/workers/` 실행 및 검증
-    - [ ] 11.4 정리 + CORS 회귀 — compose 의 keys 볼륨 안내 주석/README/.env.example 갱신 (`/data` 는 SQLite 만), `tests/api/test_cors.py` 신규 (허용 Origin 통과 / 미허용 Origin preflight 거부), OSS 표 변경 없음 확인
-        - [ ] 11.4.T1 pytest 테스트 작성 — CORS 허용/거부, compose 정적 검증 (`scripts/verify-compose.mjs`) 통과 유지
-        - [ ] 11.4.T2 `uv run pytest -q` 전체 + `node scripts/verify-compose.mjs` + 루트 `pnpm test` 실행 및 검증
+    - [x] 11.4 정리 + CORS 회귀 — compose 의 keys 볼륨 안내 주석/README/.env.example 갱신 (`/data` 는 SQLite 만), `tests/api/test_cors.py` 신규 (허용 Origin 통과 / 미허용 Origin preflight 거부), OSS 표 변경 없음 확인
+        - [x] 11.4.T1 pytest 테스트 작성 — CORS 허용/거부, compose 정적 검증 (`scripts/verify-compose.mjs`) 통과 유지
+        - [x] 11.4.T2 `uv run pytest -q` 전체 + `node scripts/verify-compose.mjs` + 루트 `pnpm test` 실행 및 검증

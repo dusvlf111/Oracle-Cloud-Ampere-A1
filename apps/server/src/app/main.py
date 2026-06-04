@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager, suppress
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -82,6 +83,17 @@ app.add_middleware(
     session_cookie="session",
     same_site="lax",
     https_only=_settings.session_secure,
+)
+
+# CORS (PRD §7.7): only the explicitly allow-listed Origins may make browser
+# cross-origin requests with credentials. An empty/non-matching Origin gets no
+# ``Access-Control-Allow-Origin`` header so the browser blocks the response.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Standard error envelope + request-id correlation (PRD §8).
