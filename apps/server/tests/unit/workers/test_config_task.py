@@ -258,6 +258,67 @@ async def test_auth_error_disables_and_notifies(engine, app_secret, monkeypatch)
         assert att[0].status == "auth_error"
 
 
+async def test_config_error_disables_notifies_and_stops(engine, app_secret, monkeypatch):
+    """Permanent malformed-request error → record + disable + notify + stop.
+
+    Regression for the prod bug where a bad image/subnet OCID made the worker
+    retry an impossible CannotParseRequest forever (hardening §2).
+    """
+    with Session(engine) as s:
+        cred = _make_credential(s)
+        cfg = _make_config(s, cred)
+        ch = NotificationChannel(
+            name="ntfy",
+            type="ntfy",
+            config_enc=encrypt_json({"server_url": "https://n", "topic": "t"}),
+        )
+        s.add(ch)
+        s.commit()
+        s.refresh(ch)
+        s.add(ConfigChannelLink(config_id=cfg.id, channel_id=ch.id))
+        s.commit()
+        cfg_id = cfg.id
+
+    def _raise(*a, **k):
+        raise _service_error(400, "CannotParseRequest", "Invalid image OCID")
+
+    monkeypatch.setattr(ct.oci_client, "launch_instance_sync", _raise)
+    notify = AsyncMock()
+    monkeypatch.setattr(ct, "fan_out", notify)
+
+    status, mult = await ct.poll_once(engine, cfg_id)
+
+    assert status == "config_error"
+    assert mult == 1.0
+    notify.assert_awaited_once()
+    payload = notify.await_args.args[1]
+    assert payload.title.startswith("⚠️ 설정 오류로 자동 중지")
+    assert payload.tags == ["warning"]
+    with Session(engine) as s:
+        cfg = s.get(InstanceConfig, cfg_id)
+        assert cfg.enabled is False  # auto-disabled, no infinite retry
+        att = s.exec(select(Attempt)).all()
+        assert att[0].status == "config_error"
+
+
+async def test_run_loop_stops_after_config_error(engine, app_secret, monkeypatch):
+    """The polling loop terminates on config_error (no infinite retry)."""
+    with Session(engine) as s:
+        cred = _make_credential(s)
+        cfg = _make_config(s, cred, retry_interval_sec=0)
+        cfg_id = cfg.id
+
+    def _raise(*a, **k):
+        raise _service_error(404, "NotAuthorizedOrNotFound", "subnet not found")
+
+    monkeypatch.setattr(ct.oci_client, "launch_instance_sync", _raise)
+    monkeypatch.setattr(ct, "fan_out", AsyncMock())
+
+    await asyncio.wait_for(ct.run_config_task(engine, cfg_id), timeout=2.0)
+    with Session(engine) as s:
+        assert s.get(InstanceConfig, cfg_id).enabled is False
+
+
 async def test_rate_limited_backoff_and_extends_sleep(engine, app_secret, monkeypatch):
     with Session(engine) as s:
         cred = _make_credential(s)

@@ -130,19 +130,31 @@ async def verify_credential(
     session: Session = Depends(get_session),
 ) -> VerifyResponse:
     cred = _get_or_404(session, credential_id)
-    passphrase = decrypt(cred.passphrase_enc).decode() if cred.passphrase_enc else None
-    result = await oci_client.verify(
-        {
-            "id": cred.id,
-            "tenancy_ocid": cred.tenancy_ocid,
-            "user_ocid": cred.user_ocid,
-            "fingerprint": cred.fingerprint,
-            "region": cred.region,
-            "private_key_path": cred.private_key_path,
-        },
-        passphrase=passphrase,
-    )
-    return VerifyResponse(ok=result.ok, error=result.error)
+    # verify must NEVER 500: any unexpected error (decrypt failure, malformed
+    # config, OCI exception) collapses into {ok: false, error} (hardening §3).
+    try:
+        passphrase = (
+            decrypt(cred.passphrase_enc).decode() if cred.passphrase_enc else None
+        )
+        result = await oci_client.verify(
+            {
+                "id": cred.id,
+                "tenancy_ocid": cred.tenancy_ocid,
+                "user_ocid": cred.user_ocid,
+                "fingerprint": cred.fingerprint,
+                "region": cred.region,
+                "private_key_path": cred.private_key_path,
+            },
+            passphrase=passphrase,
+        )
+        return VerifyResponse(ok=result.ok, error=result.error)
+    except Exception as exc:  # noqa: BLE001 — verify never raises to the client
+        logger.warning(
+            "Credential verify hit an unexpected error: %s",
+            exc,
+            extra={"credential_id": credential_id},
+        )
+        return VerifyResponse(ok=False, error=str(exc))
 
 
 @router.delete("/{credential_id}", status_code=204)

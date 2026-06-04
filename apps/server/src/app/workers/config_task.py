@@ -16,8 +16,14 @@ One ``asyncio.Task`` runs :func:`run_config_task` for each enabled
    rate_limited (429)   tenacity backoff + Attempt(rate_limited),     none
                         extend next sleep
    auth_error           Attempt(auth_error) + enabled=False + stop    priority 4
+   config_error         Attempt(config_error) + enabled=False + stop  priority 4
    other_error          Attempt(other_error), keep retrying           none
    ===================  ============================================  ==========
+
+``config_error`` (hardening §2) is a permanent malformed-request error: OCI
+400/404 (``CannotParseRequest`` / ``InvalidParameter`` / ``NotAuthorizedOrNotFound``).
+Retrying can never succeed, so the worker disables the config and notifies
+instead of looping forever.
 
 Sessions are opened per task (PRD §9.2). Every log call carries the
 ``config_id``/``credential_id``/``attempt_id`` context (PRD §7.3.2).
@@ -286,6 +292,29 @@ async def poll_once(
                     )
                     await _notify(session, config, credential, payload)
                     return status, 1.0
+                if status == oci_client.CONFIG_ERROR:
+                    # Permanent client error (malformed request) — retrying can
+                    # never succeed and only burns rate-limit budget. Disable the
+                    # config and notify, same priority as auth_error (hardening §2).
+                    logger.error(
+                        "OCI 설정 오류(영구)로 config 자동 비활성화: %s",
+                        msg,
+                        extra={
+                            "config_id": config_id,
+                            "credential_id": cred_id,
+                            "attempt_id": attempt.id,
+                        },
+                    )
+                    _disable_config(session, config_id)
+                    payload = _build_payload(
+                        NotifyKind.WARNING,
+                        f"⚠️ 설정 오류로 자동 중지: {msg}",
+                        config=config,
+                        credential=credential,
+                        error=msg,
+                    )
+                    await _notify(session, config, credential, payload)
+                    return status, 1.0
                 # other_error — record and keep retrying.
                 logger.warning(
                     "OCI 호출 실패 (기타) — 재시도 예정: %s",
@@ -341,7 +370,7 @@ async def run_config_task(engine: Engine, config_id: int) -> None:
     try:
         while True:
             status, multiplier = await poll_once(engine, config_id)
-            if status in {"success", "auth_error", "stopped"}:
+            if status in {"success", "auth_error", "config_error", "stopped"}:
                 logger.info(
                     "config task 종료 status=%s",
                     status,

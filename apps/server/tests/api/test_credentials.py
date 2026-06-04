@@ -114,6 +114,24 @@ async def test_verify_failure(
     assert "NotAuthenticated" in body["error"]
 
 
+async def test_verify_unexpected_exception_converges_to_ok_false(
+    authed_db_client: AsyncClient, cred_settings, oci_mock
+) -> None:
+    """An unexpected (non-OCI) exception must collapse to {ok: false}, not 500.
+
+    Regression for the prod ERROR `Unhandled exception` on verify (hardening §3).
+    """
+    oci_mock.return_value.list_availability_domains.side_effect = RuntimeError(
+        "totally unexpected"
+    )
+    created = (await _create(authed_db_client)).json()
+    resp = await authed_db_client.post(f"/api/credentials/{created['id']}/verify")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is False
+    assert body["error"]
+
+
 async def test_verify_not_found(
     authed_db_client: AsyncClient, cred_settings
 ) -> None:
