@@ -19,16 +19,18 @@ describe("ChannelCreateForm", () => {
     expect(screen.queryByLabelText("Topic")).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Type"), "ntfy");
-    expect(await screen.findByLabelText("Server URL")).toBeInTheDocument();
-    expect(screen.getByLabelText("Topic")).toBeInTheDocument();
+    expect(await screen.findByLabelText("ntfy URL")).toBeInTheDocument();
     expect(screen.queryByLabelText("Webhook URL")).not.toBeInTheDocument();
+    // server_url / topic are no longer separate fields.
+    expect(screen.queryByLabelText("Server URL")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Topic")).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Type"), "telegram");
     expect(await screen.findByLabelText("Bot token")).toBeInTheDocument();
     expect(screen.getByLabelText("Chat ID")).toBeInTheDocument();
   });
 
-  it("submits an ntfy channel payload with split tags", async () => {
+  it("splits a single ntfy URL into server_url + topic on submit", async () => {
     let body: unknown = null;
     server.use(
       http.post(CREATE, async ({ request }) => {
@@ -39,12 +41,7 @@ describe("ChannelCreateForm", () => {
             name: "supabin ntfy",
             type: "ntfy",
             enabled: true,
-            config: {
-              server_url: "https://ntfy.supabin.com",
-              topic: "oci-arm-alerts",
-              priority: 4,
-              tags: ["rocket", "oracle"],
-            },
+            config: { server_url: "https://ntfy.supabin.com", topic: "claude" },
             created_at: "2026-06-03T10:24:00Z",
             updated_at: "2026-06-03T10:24:00Z",
           },
@@ -58,27 +55,142 @@ describe("ChannelCreateForm", () => {
 
     await user.type(screen.getByLabelText("Name"), "supabin ntfy");
     await user.selectOptions(screen.getByLabelText("Type"), "ntfy");
-    await user.type(screen.getByLabelText("Server URL"), "https://ntfy.supabin.com");
-    await user.type(screen.getByLabelText("Topic"), "oci-arm-alerts");
-    const priority = screen.getByLabelText("Priority (1–5)");
-    await user.clear(priority);
-    await user.type(priority, "4");
-    await user.type(screen.getByLabelText("Tags (comma-separated)"), "rocket, oracle");
+    await user.type(
+      screen.getByLabelText("ntfy URL"),
+      "https://ntfy.supabin.com/claude",
+    );
 
     await user.click(screen.getByRole("button", { name: /create channel/i }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    // The single URL is decomposed into the unchanged API payload, and blank
+    // advanced fields (token/priority/tags) are omitted.
     expect(body).toMatchObject({
       name: "supabin ntfy",
       type: "ntfy",
       config: {
         type: "ntfy",
         server_url: "https://ntfy.supabin.com",
-        topic: "oci-arm-alerts",
+        topic: "claude",
+      },
+    });
+    const cfg = (body as { config: Record<string, unknown> }).config;
+    expect(cfg).not.toHaveProperty("token");
+    expect(cfg).not.toHaveProperty("priority");
+    expect(cfg).not.toHaveProperty("tags");
+  });
+
+  it("includes advanced ntfy fields only when filled in", async () => {
+    let body: unknown = null;
+    server.use(
+      http.post(CREATE, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(
+          { id: 3, name: "adv", type: "ntfy", enabled: true, config: {} },
+          { status: 201 },
+        );
+      }),
+    );
+    const onCreated = vi.fn();
+    const user = userEvent.setup();
+    render(<ChannelCreateForm onCreated={onCreated} />);
+
+    await user.type(screen.getByLabelText("Name"), "adv");
+    await user.selectOptions(screen.getByLabelText("Type"), "ntfy");
+    await user.type(
+      screen.getByLabelText("ntfy URL"),
+      "https://ntfy.sh/my-topic",
+    );
+
+    // Advanced fields live behind a collapsed <details> — open it first.
+    const priority = screen.getByLabelText("Priority (1–5)");
+    await user.clear(priority);
+    await user.type(priority, "4");
+    await user.type(
+      screen.getByLabelText("Tags (comma-separated)"),
+      "rocket, oracle",
+    );
+
+    await user.click(screen.getByRole("button", { name: /create channel/i }));
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    expect(body).toMatchObject({
+      type: "ntfy",
+      config: {
+        type: "ntfy",
+        server_url: "https://ntfy.sh",
+        topic: "my-topic",
         priority: 4,
         tags: ["rocket", "oracle"],
       },
     });
+  });
+
+  it("collapses the advanced ntfy settings by default", async () => {
+    const user = userEvent.setup();
+    render(<ChannelCreateForm />);
+    await user.selectOptions(screen.getByLabelText("Type"), "ntfy");
+
+    const advanced = screen.getByText("고급 설정").closest("details");
+    expect(advanced).not.toBeNull();
+    expect((advanced as HTMLDetailsElement).open).toBe(false);
+  });
+
+  it("rejects an ntfy URL with no topic segment", async () => {
+    const onCreated = vi.fn();
+    const user = userEvent.setup();
+    render(<ChannelCreateForm onCreated={onCreated} />);
+
+    await user.type(screen.getByLabelText("Name"), "no topic");
+    await user.selectOptions(screen.getByLabelText("Type"), "ntfy");
+    await user.type(screen.getByLabelText("ntfy URL"), "https://ntfy.sh");
+    await user.click(screen.getByRole("button", { name: /create channel/i }));
+
+    expect(await screen.findByText(/토픽이 없습니다/)).toBeInTheDocument();
+    expect(onCreated).not.toHaveBeenCalled();
+  });
+
+  it("prefills the ntfy URL by joining server_url + topic on edit", async () => {
+    type PutBody = { config?: { server_url?: string; topic?: string } };
+    const cap: { body: PutBody | null } = { body: null };
+    server.use(
+      http.put(`${CREATE}/:id`, async ({ request }) => {
+        cap.body = (await request.json()) as PutBody;
+        return HttpResponse.json({ id: 9, name: "ntfy ch", type: "ntfy" });
+      }),
+    );
+    const onSaved = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChannelCreateForm
+        mode="edit"
+        initial={{
+          id: 9,
+          name: "ntfy ch",
+          type: "ntfy",
+          enabled: true,
+          config: {
+            type: "ntfy",
+            server_url: "https://ntfy.supabin.com",
+            topic: "claude",
+          },
+          created_at: "2026-06-03T10:24:00Z",
+          updated_at: "2026-06-03T10:24:00Z",
+        }}
+        onSaved={onSaved}
+      />,
+    );
+
+    // The two stored fields are joined back into one prefilled URL.
+    expect(screen.getByLabelText("ntfy URL")).toHaveValue(
+      "https://ntfy.supabin.com/claude",
+    );
+
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(cap.body?.config?.server_url).toBe("https://ntfy.supabin.com");
+    expect(cap.body?.config?.topic).toBe("claude");
   });
 
   it("prefills masked secrets and PUTs on edit, type locked", async () => {

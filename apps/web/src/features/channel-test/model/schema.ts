@@ -1,11 +1,44 @@
 import { z } from "zod";
 
+import { NtfyUrlError, parseNtfyUrl } from "../lib/ntfyUrl";
+
 /**
  * Channel creation form, modelled as a zod discriminated union on `type`
  * (PRD §7.5.2 / §6 config_enc). The `config` shape changes per type:
  * discord/slack → webhook_url, telegram → bot_token+chat_id,
- * ntfy → server_url/topic/token?/priority/tags.
+ * ntfy → url (single line, split into server_url/topic on submit) + advanced
+ * token?/priority?/tags.
  */
+
+/**
+ * A single "ntfy URL" string that must split into a server_url + topic. The UI
+ * surfaces only this one field; the transform layer parses it back into the
+ * API's `{ server_url, topic }` payload. The server config_enc schema is
+ * unchanged.
+ */
+const ntfyUrlField = z.string().superRefine((value, ctx) => {
+  try {
+    parseNtfyUrl(value);
+  } catch (err) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        err instanceof NtfyUrlError
+          ? err.message
+          : "올바른 ntfy URL 이 아닙니다",
+    });
+  }
+});
+
+/** Advanced ntfy fields, all optional and omitted from the payload when blank. */
+const ntfyAdvanced = {
+  token: z.string().optional(),
+  // Blank → auto (server picks 5 on success / 4 on error). Coerce only when set.
+  priority: z
+    .union([z.literal(""), z.coerce.number().int().min(1).max(5)])
+    .optional(),
+  tags: z.string().optional(), // comma-separated in the UI
+};
 
 const discordConfig = z.object({
   type: z.literal("discord"),
@@ -25,11 +58,8 @@ const telegramConfig = z.object({
 
 const ntfyConfig = z.object({
   type: z.literal("ntfy"),
-  server_url: z.string().url("Valid server URL required"),
-  topic: z.string().min(1, "Topic is required"),
-  token: z.string().optional(),
-  priority: z.coerce.number().int().min(1).max(5).default(3),
-  tags: z.string().optional(), // comma-separated in the UI
+  url: ntfyUrlField,
+  ...ntfyAdvanced,
 });
 
 export const channelConfigSchema = z.discriminatedUnion("type", [
@@ -73,13 +103,8 @@ const telegramEdit = z.object({
 });
 const ntfyEdit = z.object({
   type: z.literal("ntfy"),
-  server_url: z
-    .string()
-    .refine((v) => /^https?:\/\/.+/.test(v), "Valid server URL required"),
-  topic: z.string().min(1, "Topic is required"),
-  token: z.string().optional(),
-  priority: z.coerce.number().int().min(1).max(5).default(3),
-  tags: z.string().optional(),
+  url: ntfyUrlField,
+  ...ntfyAdvanced,
 });
 
 export const channelEditConfigSchema = z.discriminatedUnion("type", [
