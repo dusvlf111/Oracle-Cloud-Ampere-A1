@@ -26,6 +26,7 @@ export function CredentialsPage() {
 
   const [toast, setToast] = React.useState<Toast | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
+  const [editTarget, setEditTarget] = React.useState<number | null>(null);
   const [deleting, setDeleting] = React.useState(false);
 
   const invalidate = () =>
@@ -94,21 +95,43 @@ export function CredentialsPage() {
           <p className="text-sm text-gray-500">No credentials yet.</p>
         )}
         {credentials.map((c) => (
-          <CredentialCard
-            key={c.id}
-            credential={c}
-            actions={
-              <>
-                <CredentialVerifyButton
-                  credentialId={c.id}
-                  onResult={onVerifyResult}
+          <div key={c.id} className="flex flex-col gap-2">
+            <CredentialCard
+              credential={c}
+              actions={
+                <>
+                  <CredentialVerifyButton
+                    credentialId={c.id}
+                    onResult={onVerifyResult}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      setEditTarget((t) => (t === c.id ? null : c.id))
+                    }
+                  >
+                    {editTarget === c.id ? "Cancel" : "Edit"}
+                  </Button>
+                  <Button type="button" onClick={() => setDeleteTarget(c.id)}>
+                    Delete
+                  </Button>
+                </>
+              }
+            />
+            {editTarget === c.id && (
+              <div className="rounded border border-gray-200 p-3">
+                <CredentialCreateForm
+                  mode="edit"
+                  initial={c}
+                  onSaved={() => {
+                    setEditTarget(null);
+                    setToast({ ok: true, message: "Credential updated." });
+                    void invalidate();
+                  }}
                 />
-                <Button type="button" onClick={() => setDeleteTarget(c.id)}>
-                  Delete
-                </Button>
-              </>
-            }
-          />
+              </div>
+            )}
+          </div>
         ))}
       </section>
 

@@ -142,7 +142,7 @@ export function ConfigCreateForm({
       const payload = {
         name: values.name,
         credential_id: Number(values.credential_id),
-        shape: values.shape,
+        shape: values.shape || "VM.Standard.A1.Flex",
         ocpus: Number(values.ocpus),
         memory_gb: Number(values.memory_gb),
         boot_volume_gb: Number(values.boot_volume_gb),

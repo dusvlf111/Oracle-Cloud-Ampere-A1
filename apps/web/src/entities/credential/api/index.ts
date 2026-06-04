@@ -4,6 +4,7 @@
 export {
   useListCredentialsApiCredentialsGet as useCredentials,
   createCredentialApiCredentialsPost as createCredential,
+  updateCredentialApiCredentialsCredentialIdPut as updateCredential,
   verifyCredentialApiCredentialsCredentialIdVerifyPost as verifyCredential,
   deleteCredentialApiCredentialsCredentialIdDelete as deleteCredential,
   getListCredentialsApiCredentialsGetQueryKey as credentialsQueryKey,

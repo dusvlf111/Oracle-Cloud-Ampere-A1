@@ -1,13 +1,15 @@
 import type { ChannelCreate } from "@/shared/api/schemas/channelCreate";
 
-import type { ChannelCreateOutput } from "./schema";
+import type { ChannelCreateOutput, ChannelEditOutput } from "./schema";
 
 /**
- * Map validated form output to the API's `ChannelCreate` payload (PRD §8).
- * For ntfy the comma-separated `tags` string is split into an array.
+ * Map validated form output to the API's `ChannelCreate`/`ChannelUpdate`
+ * payload (PRD §8). For ntfy the comma-separated `tags` string is split into an
+ * array. Used for both create and edit — on edit the server keeps the stored
+ * secret when a sensitive field is blank or the masked (***...) echo.
  */
 export function toChannelCreatePayload(
-  values: ChannelCreateOutput,
+  values: ChannelCreateOutput | ChannelEditOutput,
 ): ChannelCreate {
   const { name, enabled, config } = values;
   const base = { name, enabled };

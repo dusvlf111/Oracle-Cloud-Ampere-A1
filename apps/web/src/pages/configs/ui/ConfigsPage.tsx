@@ -21,6 +21,7 @@ export function ConfigsPage() {
     null,
   );
   const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
+  const [editTarget, setEditTarget] = React.useState<number | null>(null);
   const [deleting, setDeleting] = React.useState(false);
 
   const invalidate = () =>
@@ -79,18 +80,40 @@ export function ConfigsPage() {
           <p className="text-sm text-gray-500">No configs yet.</p>
         )}
         {configs.map((cfg) => (
-          <ConfigRow
-            key={cfg.id}
-            config={cfg}
-            actions={
-              <>
-                <ConfigToggle configId={cfg.id} enabled={cfg.enabled} />
-                <Button type="button" onClick={() => setDeleteTarget(cfg.id)}>
-                  Delete
-                </Button>
-              </>
-            }
-          />
+          <div key={cfg.id} className="flex flex-col gap-2">
+            <ConfigRow
+              config={cfg}
+              actions={
+                <>
+                  <ConfigToggle configId={cfg.id} enabled={cfg.enabled} />
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      setEditTarget((t) => (t === cfg.id ? null : cfg.id))
+                    }
+                  >
+                    {editTarget === cfg.id ? "Cancel" : "Edit"}
+                  </Button>
+                  <Button type="button" onClick={() => setDeleteTarget(cfg.id)}>
+                    Delete
+                  </Button>
+                </>
+              }
+            />
+            {editTarget === cfg.id && (
+              <div className="rounded border border-gray-200 p-3">
+                <ConfigCreateForm
+                  mode="edit"
+                  initial={cfg}
+                  onSaved={() => {
+                    setEditTarget(null);
+                    setToast({ ok: true, message: "Config updated." });
+                    void invalidate();
+                  }}
+                />
+              </div>
+            )}
+          </div>
         ))}
       </section>
 
