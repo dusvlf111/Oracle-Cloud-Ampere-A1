@@ -41,15 +41,25 @@ async def client() -> AsyncClient:
 
 
 @pytest.fixture
-def admin_settings(engine, db_app) -> None:
-    """Seed the single admin in the test DB (DB-based auth).
+def admin_settings(engine, db_app):
+    """Seed the bootstrap admin User in the test DB (DB-based auth, Push 9).
 
     Activates the in-memory ``get_session`` override (via ``db_app``) and
-    persists the admin credentials so ``/api/auth/login`` succeeds. Replaces the
-    former env-based credential fixture.
+    persists an active admin so ``/api/auth/login`` succeeds. Returns the admin
+    ``User`` so ownership-scope tests can reference its id.
     """
+    from app.db.models import User
+
     with Session(engine) as s:
-        _auth.create_admin(s, TEST_USERNAME, TEST_PASSWORD)
+        admin = _auth.register_user(s, TEST_USERNAME, TEST_PASSWORD)
+        # Detach a simple record the caller can read post-commit.
+        return User(
+            id=admin.id,
+            username=admin.username,
+            password_hash=admin.password_hash,
+            role=admin.role,
+            status=admin.status,
+        )
 
 
 @pytest_asyncio.fixture

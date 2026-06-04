@@ -7,10 +7,14 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
-from fastapi import Request
+from fastapi import Depends, Request
+from sqlmodel import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from ulid import ULID
+
+from app.db.models import User
+from app.db.session import get_session
 
 
 class AppError(Exception):
@@ -59,12 +63,52 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def require_login(request: Request) -> str:
-    """Session auth guard. Returns the username or raises ``unauthorized`` (401).
+def require_login(
+    request: Request,
+    session: Session = Depends(get_session),
+) -> User:
+    """Session auth guard. Returns the current ``User`` or 401 ``unauthorized``.
+
+    The session stores ``user_id`` (Push 9) — and, for backward compatibility
+    with sessions issued before the multi-user migration, the legacy ``user``
+    (username) key. Either is resolved to a live ``User`` row; if the row is
+    missing or no longer ``active`` (disabled/pending after the session was
+    issued) the request is rejected so a re-login is required.
 
     Public routes (``/healthz``, ``/api/auth/login``) must NOT depend on this.
     """
-    user = request.session.get("user") if "session" in request.scope else None
-    if not user:
+    if "session" not in request.scope:
         raise AppError("unauthorized", 401, "Not authenticated")
+
+    sess = request.session
+    user: User | None = None
+    user_id = sess.get("user_id")
+    if user_id is not None:
+        user = session.get(User, user_id)
+    else:
+        # Legacy session (pre-Push 9): only a username was stored.
+        username = sess.get("user")
+        if username:
+            from app.services.auth import get_user_by_username
+
+            user = get_user_by_username(session, username)
+
+    if user is None:
+        raise AppError("unauthorized", 401, "Not authenticated")
+
+    from app.services.auth import STATUS_ACTIVE
+
+    if user.status != STATUS_ACTIVE:
+        # Account was disabled/un-approved after the session was issued.
+        raise AppError("unauthorized", 401, "Not authenticated")
+
+    return user
+
+
+def require_admin(user: User = Depends(require_login)) -> User:
+    """Admin-only guard. 403 ``forbidden`` for non-admin users (PRD §6.3)."""
+    from app.services.auth import ROLE_ADMIN
+
+    if user.role != ROLE_ADMIN:
+        raise AppError("forbidden", 403, "Admin privileges required")
     return user

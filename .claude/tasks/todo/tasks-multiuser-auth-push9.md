@@ -41,9 +41,9 @@
     - [x] 9.1 `User` 모델 + 무중단 마이그레이션 — User 테이블 (username unique/role/status/approved_at/approved_by), `OciCredential`/`InstanceConfig`/`NotificationChannel` 에 `owner_id` FK, Alembic: ① user 생성 ② AppSetting `admin_username`/`admin_password_hash` → `User(role=admin, status=active)` 이전 + 키 삭제 ③ 기존 리소스 owner 백필 ④ NOT NULL 적용
         - [x] 9.1.T1 pytest 테스트 작성 — 마이그레이션 시나리오 (기존 admin+리소스 있는 DB → upgrade → User 행/백필 검증), 모델 관계
         - [x] 9.1.T2 `uv run pytest -q tests/unit/db/` + 임시 DB `alembic upgrade head` 실행 및 검증
-    - [ ] 9.2 회원가입 API — `POST /api/auth/register` (rate limit 5/min/IP 재사용): 최초 유저 → admin/active + 자동 로그인 (기존 setup 동작 흡수, `/api/auth/setup` 은 register 위임 wrapper 로 deprecated 유지), 이후 → user/pending 201 세션 미발급, 중복 409 `username_taken`. `services/auth.py` 를 AppSetting → User 테이블 기반으로 전환, conftest fixture 일괄 전환
-        - [ ] 9.2.T1 pytest 테스트 작성 — 최초 가입=admin 자동로그인, 2번째 가입=pending 무세션, 중복 409, rate limit 429, setup 하위호환
-        - [ ] 9.2.T2 `uv run pytest -q tests/api/test_auth_register.py tests/api/test_auth_setup.py` 실행 및 검증
+    - [x] 9.2 회원가입 API — `POST /api/auth/register` (rate limit 5/min/IP 재사용): 최초 유저 → admin/active + 자동 로그인 (기존 setup 동작 흡수, `/api/auth/setup` 은 register 위임 wrapper 로 deprecated 유지), 이후 → user/pending 201 세션 미발급, 중복 409 `username_taken`. `services/auth.py` 를 AppSetting → User 테이블 기반으로 전환, conftest fixture 일괄 전환
+        - [x] 9.2.T1 pytest 테스트 작성 — 최초 가입=admin 자동로그인, 2번째 가입=pending 무세션, 중복 409, rate limit 429, setup 하위호환
+        - [x] 9.2.T2 `uv run pytest -q tests/api/test_auth_register.py tests/api/test_auth_setup.py` 실행 및 검증
     - [ ] 9.3 로그인 status 분기 + 세션 확장 — pending → 403 `account_pending`, disabled → 403 `account_disabled`, active 만 세션 발급. 세션에 `user_id`/`role` 저장, `GET /api/auth/me` → `{username, role, status}`, `require_login` 이 User 객체 반환하도록 확장
         - [ ] 9.3.T1 pytest 테스트 작성 — pending/disabled 로그인 403 (코드 구분), active 성공, me 응답 role 포함, 기존 세션 하위호환 (재로그인 요구)
         - [ ] 9.3.T2 `uv run pytest -q tests/api/test_auth.py` 실행 및 검증
