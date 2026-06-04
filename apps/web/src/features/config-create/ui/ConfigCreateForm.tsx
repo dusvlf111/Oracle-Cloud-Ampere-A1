@@ -7,9 +7,11 @@ import { Controller, useForm } from "react-hook-form";
 import { useChannels } from "@/entities/channel";
 import { createConfig, type Config } from "@/entities/config";
 import { useCredentials } from "@/entities/credential";
+import { useAvailabilityDomains, useImages, useSubnets } from "@/entities/meta";
 import { Button, Input, Label, isApiError } from "@/shared";
 
 import { configCreateSchema, type ConfigCreateValues } from "../model/schema";
+import { MetaSelectField, type MetaOption } from "./MetaSelectField";
 
 export interface ConfigCreateFormProps {
   onCreated?: (config: Config) => void;
@@ -18,9 +20,6 @@ export interface ConfigCreateFormProps {
 const TEXT_FIELDS: Array<{ name: keyof ConfigCreateValues; label: string }> = [
   { name: "name", label: "Name" },
   { name: "shape", label: "Shape" },
-  { name: "image_ocid", label: "Image OCID" },
-  { name: "subnet_ocid", label: "Subnet OCID" },
-  { name: "availability_domain", label: "Availability domain" },
   { name: "ssh_public_key", label: "SSH public key" },
 ];
 
@@ -41,6 +40,7 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
     register,
     handleSubmit,
     control,
+    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<ConfigCreateValues>({
@@ -59,6 +59,44 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
       channel_ids: [],
     },
   });
+
+  // Coerce the selected credential to a number; meta lookups stay disabled
+  // until a real credential is chosen.
+  const rawCredentialId = watch("credential_id");
+  const credentialId =
+    rawCredentialId == null || rawCredentialId === ""
+      ? undefined
+      : Number(rawCredentialId);
+  const shape = watch("shape") || "VM.Standard.A1.Flex";
+  const hasCredential = credentialId != null && !Number.isNaN(credentialId);
+
+  const enabled = { query: { enabled: hasCredential } } as const;
+
+  const adQuery = useAvailabilityDomains(
+    { credential_id: credentialId ?? 0 },
+    enabled,
+  );
+  const imageQuery = useImages(
+    { credential_id: credentialId ?? 0, shape },
+    enabled,
+  );
+  const subnetQuery = useSubnets(
+    { credential_id: credentialId ?? 0 },
+    enabled,
+  );
+
+  const adOptions: MetaOption[] = (adQuery.data ?? []).map((ad) => ({
+    value: ad,
+    label: ad,
+  }));
+  const imageOptions: MetaOption[] = (imageQuery.data ?? []).map((img) => ({
+    value: img.ocid,
+    label: `${img.display_name} (${img.os_version})`,
+  }));
+  const subnetOptions: MetaOption[] = (subnetQuery.data ?? []).map((s) => ({
+    value: s.ocid,
+    label: `${s.display_name} (${s.cidr_block})`,
+  }));
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
@@ -122,6 +160,60 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
           </p>
         )}
       </div>
+
+      <Controller
+        control={control}
+        name="availability_domain"
+        render={({ field }) => (
+          <MetaSelectField
+            id="availability_domain"
+            label="Availability domain"
+            value={field.value ?? ""}
+            onChange={field.onChange}
+            options={adOptions}
+            isLoading={adQuery.isLoading}
+            isError={adQuery.isError}
+            hasCredential={hasCredential}
+            errorMessage={errors.availability_domain?.message as string}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="image_ocid"
+        render={({ field }) => (
+          <MetaSelectField
+            id="image_ocid"
+            label="Image OCID"
+            value={field.value ?? ""}
+            onChange={field.onChange}
+            options={imageOptions}
+            isLoading={imageQuery.isLoading}
+            isError={imageQuery.isError}
+            hasCredential={hasCredential}
+            errorMessage={errors.image_ocid?.message as string}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="subnet_ocid"
+        render={({ field }) => (
+          <MetaSelectField
+            id="subnet_ocid"
+            label="Subnet OCID"
+            value={field.value ?? ""}
+            onChange={field.onChange}
+            options={subnetOptions}
+            isLoading={subnetQuery.isLoading}
+            isError={subnetQuery.isError}
+            hasCredential={hasCredential}
+            errorMessage={errors.subnet_ocid?.message as string}
+          />
+        )}
+      />
 
       {NUMBER_FIELDS.map(({ name, label }) => (
         <div key={name} className="flex flex-col gap-1">
