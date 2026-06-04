@@ -74,11 +74,11 @@ describe("PollingStatus", () => {
     renderWidget();
 
     const card = await screen.findByTestId("polling-card");
-    expect(within(card).getByText("계정")).toBeInTheDocument();
+    expect(within(card).getByText("Account")).toBeInTheDocument();
     expect(within(card).getByText("—")).toBeInTheDocument();
   });
 
-  it("shows '아직 시도 없음' when there are no attempts yet", async () => {
+  it("shows 'No attempts yet' when there are no attempts yet", async () => {
     server.use(
       http.get(API, () =>
         HttpResponse.json([
@@ -89,7 +89,7 @@ describe("PollingStatus", () => {
     renderWidget();
 
     const card = await screen.findByTestId("polling-card");
-    expect(within(card).getByText("아직 시도 없음")).toBeInTheDocument();
+    expect(within(card).getByText("No attempts yet")).toBeInTheDocument();
     expect(within(card).queryByTestId("attempt-status-badge")).toBeNull();
   });
 
@@ -99,7 +99,7 @@ describe("PollingStatus", () => {
 
     await waitFor(() =>
       expect(screen.getByTestId("polling-empty")).toHaveTextContent(
-        "활성화된 설정이 없습니다.",
+        "No active configs.",
       ),
     );
     expect(screen.queryByTestId("polling-card")).toBeNull();

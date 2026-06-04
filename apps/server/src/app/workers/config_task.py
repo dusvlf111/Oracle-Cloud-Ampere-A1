@@ -99,13 +99,13 @@ def _build_payload(
     ts = datetime.now(tz=timezone.utc).isoformat()
     lines = [
         f"Config: {config.name}",
-        f"계정: {credential.name}",
-        f"시각: {ts}",
+        f"Account: {credential.name}",
+        f"Time: {ts}",
     ]
     if instance_ocid:
-        lines.append(f"인스턴스 OCID: {instance_ocid}")
+        lines.append(f"Instance OCID: {instance_ocid}")
     if error:
-        lines.append(f"오류: {error}")
+        lines.append(f"Error: {error}")
     tag = {
         NotifyKind.SUCCESS: "success",
         NotifyKind.WARNING: "warning",
@@ -251,7 +251,7 @@ async def poll_once(
                 _disable_config(session, config_id)
                 payload = _build_payload(
                     NotifyKind.WARNING,
-                    f"⚠️ 최대 시도 횟수({config.max_attempts}회) 도달로 자동 중지",
+                    f"⚠️ Auto-stopped: max attempts ({config.max_attempts}) reached",
                     config=config,
                     credential=credential,
                     error=f"attempts={made}/{config.max_attempts}",
@@ -314,7 +314,7 @@ async def poll_once(
                     _disable_config(session, config_id)
                     payload = _build_payload(
                         NotifyKind.WARNING,
-                        "⚠️ OCI 인증 오류",
+                        "⚠️ OCI auth error",
                         config=config,
                         credential=credential,
                         error=msg,
@@ -337,7 +337,7 @@ async def poll_once(
                     _disable_config(session, config_id)
                     payload = _build_payload(
                         NotifyKind.WARNING,
-                        f"⚠️ 설정 오류로 자동 중지: {msg}",
+                        f"⚠️ Auto-stopped (config error): {msg}",
                         config=config,
                         credential=credential,
                         error=msg,
@@ -376,7 +376,7 @@ async def poll_once(
             _disable_config(session, config_id)
             payload = _build_payload(
                 NotifyKind.SUCCESS,
-                "✅ OCI 인스턴스 생성 성공",
+                "✅ OCI instance created",
                 config=config,
                 credential=credential,
                 instance_ocid=instance_ocid,

@@ -57,7 +57,7 @@ describe("CredentialCreateForm", () => {
     expect(contentType).toContain("boundary=");
   });
 
-  it("supports a free-text region via the 직접 입력 toggle", async () => {
+  it("supports a free-text region via the Manual input toggle", async () => {
     server.use(
       http.post(CREATE, () => HttpResponse.json({ id: 1 }, { status: 201 })),
     );
@@ -71,7 +71,7 @@ describe("CredentialCreateForm", () => {
     await user.type(screen.getByLabelText("Fingerprint"), "ab:cd");
     // Toggle the region field to free-text entry, then type a non-preset value.
     await user.click(
-      screen.getByRole("button", { name: "직접 입력", pressed: false }),
+      screen.getByRole("button", { name: "Manual input", pressed: false }),
     );
     const regionInput = screen.getByLabelText("Region") as HTMLInputElement;
     await user.type(regionInput, "il-jerusalem-1");
@@ -156,7 +156,7 @@ describe("CredentialCreateForm", () => {
     const user = userEvent.setup();
     render(<CredentialCreateForm onCreated={vi.fn()} />);
 
-    await user.click(screen.getByRole("button", { name: /구성 파일 붙여넣기/ }));
+    await user.click(screen.getByRole("button", { name: /Paste OCI config/ }));
     const textarea = screen.getByLabelText("OCI config (ini)");
     const block = [
       "[DEFAULT]",
@@ -184,7 +184,7 @@ describe("CredentialCreateForm", () => {
       "ap-tokyo-1",
     );
     // key_file ignored → hint shown.
-    expect(screen.getByText(/key_file 은 무시했습니다/)).toBeInTheDocument();
+    expect(screen.getByText(/key_file was ignored/)).toBeInTheDocument();
   });
 
   it("blocks submit and shows validation errors when required fields are empty", async () => {

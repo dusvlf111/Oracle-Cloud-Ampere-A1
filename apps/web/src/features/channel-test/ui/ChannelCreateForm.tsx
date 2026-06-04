@@ -156,7 +156,7 @@ export function ChannelCreateForm({
     | Record<string, { message?: string }>
     | undefined;
 
-  const secretHint = isEdit ? " (변경 시에만 입력)" : "";
+  const secretHint = isEdit ? " (enter only to change)" : "";
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3" noValidate>
@@ -189,7 +189,7 @@ export function ChannelCreateForm({
         </select>
         {isEdit && (
           <p className="text-xs text-gray-500">
-            타입은 편집 시 변경할 수 없습니다.
+            Type cannot be changed when editing.
           </p>
         )}
       </div>
@@ -235,10 +235,10 @@ export function ChannelCreateForm({
             <Label htmlFor="ntfy_url">ntfy URL</Label>
             <Input
               id="ntfy_url"
-              placeholder="https://ntfy.sh/내-토픽"
+              placeholder="https://ntfy.sh/my-topic"
               {...register("config.url")}
             />
-            <p className="text-xs text-gray-500">서버주소/토픽</p>
+            <p className="text-xs text-gray-500">server/topic</p>
             {configErrors?.url && (
               <p role="alert" className="text-sm text-red-600">
                 {configErrors.url.message}
@@ -248,7 +248,7 @@ export function ChannelCreateForm({
 
           <details className="rounded border border-gray-200" open={advancedOpen}>
             <summary className="cursor-pointer select-none px-3 py-2 text-sm text-gray-700">
-              고급 설정
+              Advanced settings
             </summary>
             <div className="flex flex-col gap-3 px-3 pb-3">
               <div className="flex flex-col gap-1">
@@ -265,7 +265,7 @@ export function ChannelCreateForm({
                   {...register("config.priority")}
                 />
                 <p className="text-xs text-gray-500">
-                  비워두면 자동 (성공 5 / 오류 4)
+                  Leave blank for auto (5 on success / 4 on error)
                 </p>
               </div>
               <div className="flex flex-col gap-1">
@@ -276,8 +276,8 @@ export function ChannelCreateForm({
           </details>
 
           <p className="text-xs text-gray-500">
-            참고: 이 URL 로 POST 만 해도 알림이 갑니다 — curl -d &apos;테스트&apos;
-            &lt;URL&gt;
+            Tip: a plain POST to this URL sends a notification — curl -d
+            &apos;test&apos; &lt;URL&gt;
           </p>
         </>
       )}

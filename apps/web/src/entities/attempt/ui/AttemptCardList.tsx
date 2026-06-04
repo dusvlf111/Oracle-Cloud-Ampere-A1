@@ -50,7 +50,7 @@ export function AttemptCardList({ attempts }: AttemptCardListProps) {
                 {a.config_name ? `${a.config_name} (#${a.config_id})` : `#${a.config_id}`}
               </span>
               {a.credential_name && (
-                <span className="text-gray-400">계정 {a.credential_name}</span>
+                <span className="text-gray-400">Account {a.credential_name}</span>
               )}
             </span>
             <span>

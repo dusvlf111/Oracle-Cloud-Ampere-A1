@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "OCI Ampere A1 Auto-Provisioner",
     short_name: "Ampere A1",
-    description: "Oracle Cloud Ampere A1 자동 신청 시스템",
+    description: "Oracle Cloud Ampere A1 auto-provisioning system",
     start_url: "/",
     scope: "/",
     display: "standalone",

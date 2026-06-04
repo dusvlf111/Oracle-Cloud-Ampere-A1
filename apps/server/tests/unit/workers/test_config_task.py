@@ -261,7 +261,7 @@ async def test_auth_error_disables_and_notifies(engine, app_secret, monkeypatch)
     assert status == "auth_error"
     notify.assert_awaited_once()
     payload = notify.await_args.args[1]
-    assert payload.title == "⚠️ OCI 인증 오류"
+    assert payload.title == "⚠️ OCI auth error"
     assert payload.tags == ["warning"]
     with Session(engine) as s:
         cfg = s.get(InstanceConfig, cfg_id)
@@ -305,7 +305,7 @@ async def test_config_error_disables_notifies_and_stops(engine, app_secret, monk
     assert mult == 1.0
     notify.assert_awaited_once()
     payload = notify.await_args.args[1]
-    assert payload.title.startswith("⚠️ 설정 오류로 자동 중지")
+    assert payload.title.startswith("⚠️ Auto-stopped (config error)")
     assert payload.tags == ["warning"]
     with Session(engine) as s:
         cfg = s.get(InstanceConfig, cfg_id)
@@ -446,7 +446,7 @@ async def test_max_attempts_reached_disables_notifies_and_stops(
     launch.assert_not_called()  # no further OCI call past the cap
     notify.assert_awaited_once()
     payload = notify.await_args.args[1]
-    assert "최대 시도 횟수" in payload.title
+    assert "max attempts" in payload.title
     with Session(engine) as s:
         assert s.get(InstanceConfig, cfg_id).enabled is False
 

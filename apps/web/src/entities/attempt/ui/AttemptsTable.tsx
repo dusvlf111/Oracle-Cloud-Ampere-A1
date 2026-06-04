@@ -44,7 +44,7 @@ function formatTime(iso: string | undefined): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
 }
 
-/** "이름 (#id)" when the joined config name is present, else the bare id. */
+/** "name (#id)" when the joined config name is present, else the bare id. */
 function formatConfigLabel(name: string | null | undefined, id: number): string {
   return name ? `${name} (#${id})` : `#${id}`;
 }
@@ -195,7 +195,7 @@ export function AttemptsTable({ defaultConfigId }: AttemptsTableProps) {
 
       {!isLoading && rows.length === 0 && (
         <p className="px-3 py-6 text-center text-sm text-gray-400">
-          시도 이력이 없습니다.
+          No attempts yet.
         </p>
       )}
     </div>

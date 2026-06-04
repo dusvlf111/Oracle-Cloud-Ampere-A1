@@ -49,9 +49,9 @@ export function useUserActions(): UseUserActionsResult {
         return true;
       } catch (err) {
         if (isApiError(err) && err.code === "last_admin") {
-          setError("마지막 관리자는 비활성화할 수 없습니다.");
+          setError("You cannot disable the last admin.");
         } else {
-          setError(isApiError(err) ? err.message : "작업에 실패했습니다.");
+          setError(isApiError(err) ? err.message : "The action failed.");
         }
         return false;
       } finally {

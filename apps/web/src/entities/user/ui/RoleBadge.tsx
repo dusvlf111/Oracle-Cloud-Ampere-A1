@@ -8,8 +8,8 @@ export interface RoleBadgeProps {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: "관리자",
-  user: "사용자",
+  admin: "Admin",
+  user: "User",
 };
 
 const ROLE_STYLES: Record<string, string> = {

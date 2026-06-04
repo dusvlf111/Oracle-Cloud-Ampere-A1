@@ -131,7 +131,7 @@ describe("ChannelCreateForm", () => {
     render(<ChannelCreateForm />);
     await user.selectOptions(screen.getByLabelText("Type"), "ntfy");
 
-    const advanced = screen.getByText("고급 설정").closest("details");
+    const advanced = screen.getByText("Advanced settings").closest("details");
     expect(advanced).not.toBeNull();
     expect((advanced as HTMLDetailsElement).open).toBe(false);
   });
@@ -146,7 +146,7 @@ describe("ChannelCreateForm", () => {
     await user.type(screen.getByLabelText("ntfy URL"), "https://ntfy.sh");
     await user.click(screen.getByRole("button", { name: /create channel/i }));
 
-    expect(await screen.findByText(/토픽이 없습니다/)).toBeInTheDocument();
+    expect(await screen.findByText(/Missing topic/)).toBeInTheDocument();
     expect(onCreated).not.toHaveBeenCalled();
   });
 

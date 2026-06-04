@@ -76,10 +76,10 @@ describe("UsersPage", () => {
     renderPage();
 
     await waitFor(() => expect(table().getAllByTestId("user-row").length).toBe(1));
-    await u.click(table().getByRole("button", { name: /^승인$/ }));
+    await u.click(table().getByRole("button", { name: /^Approve$/ }));
 
     await waitFor(() =>
-      expect(table().queryByRole("button", { name: /^승인$/ })).toBeNull(),
+      expect(table().queryByRole("button", { name: /^Approve$/ })).toBeNull(),
     );
     expect(table().getByTestId("user-status-badge")).toHaveAttribute(
       "data-status",
@@ -102,16 +102,16 @@ describe("UsersPage", () => {
     renderPage();
 
     await waitFor(() => expect(table().getAllByTestId("user-row").length).toBe(1));
-    await u.click(table().getByRole("button", { name: /^거부$/ }));
+    await u.click(table().getByRole("button", { name: /^Reject$/ }));
 
     // Confirm dialog appears; reject not yet sent.
-    const dialog = await screen.findByRole("dialog", { name: /가입 거부 확인/ });
+    const dialog = await screen.findByRole("dialog", { name: /Confirm rejection/ });
     expect(rejectCalled).toBe(false);
-    await u.click(within(dialog).getByRole("button", { name: /^거부$/ }));
+    await u.click(within(dialog).getByRole("button", { name: /^Reject$/ }));
 
     await waitFor(() => expect(rejectCalled).toBe(true));
     await waitFor(() =>
-      expect(screen.getByText(/유저가 없습니다/)).toBeInTheDocument(),
+      expect(screen.getByText(/No users/)).toBeInTheDocument(),
     );
   });
 
@@ -132,10 +132,10 @@ describe("UsersPage", () => {
     renderPage();
 
     await waitFor(() => expect(table().getAllByTestId("user-row").length).toBe(1));
-    await u.click(table().getByRole("button", { name: /^비활성$/ }));
+    await u.click(table().getByRole("button", { name: /^Disable$/ }));
 
     await waitFor(() =>
-      expect(table().getByRole("button", { name: /^활성$/ })).toBeInTheDocument(),
+      expect(table().getByRole("button", { name: /^Enable$/ })).toBeInTheDocument(),
     );
   });
 
@@ -154,10 +154,10 @@ describe("UsersPage", () => {
     renderPage();
 
     await waitFor(() => expect(table().getAllByTestId("user-row").length).toBe(1));
-    await u.click(table().getByRole("button", { name: /^비활성$/ }));
+    await u.click(table().getByRole("button", { name: /^Disable$/ }));
 
     expect(
-      await table().findByText(/마지막 관리자는 비활성화할 수 없습니다/),
+      await table().findByText(/You cannot disable the last admin/),
     ).toBeInTheDocument();
   });
 });

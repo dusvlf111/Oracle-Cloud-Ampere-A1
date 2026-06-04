@@ -68,25 +68,25 @@ describe("Sidebar", () => {
     }
   });
 
-  it("shows the 유저 관리 link for an admin session only", async () => {
+  it("shows the Users link for an admin session only", async () => {
     seedSession("admin");
     renderSidebar();
     await waitFor(() =>
-      expect(screen.getAllByRole("link", { name: /유저 관리/ }).length).toBeGreaterThan(0),
+      expect(screen.getAllByRole("link", { name: /Users/ }).length).toBeGreaterThan(0),
     );
     expect(
-      screen.getAllByRole("link", { name: /유저 관리/ })[0],
+      screen.getAllByRole("link", { name: /Users/ })[0],
     ).toHaveAttribute("href", "/users");
   });
 
-  it("hides the 유저 관리 link for a non-admin session", async () => {
+  it("hides the Users link for a non-admin session", async () => {
     seedSession("user");
     renderSidebar();
     // Wait for the session to resolve, then assert the admin link is absent.
     await waitFor(() =>
       expect(screen.getAllByRole("link", { name: /configs/i }).length).toBeGreaterThan(0),
     );
-    expect(screen.queryByRole("link", { name: /유저 관리/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Users/ })).toBeNull();
   });
 
   it("marks the active route via aria-current", () => {

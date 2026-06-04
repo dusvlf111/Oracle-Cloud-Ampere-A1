@@ -13,9 +13,9 @@ export interface UserActionsProps {
 
 /**
  * Per-row admin actions for a user (PRD §6.1):
- * - pending  → 승인 / 거부(확인 모달)
- * - active   → 비활성
- * - disabled → 활성
+ * - pending  → Approve / Reject (confirm modal)
+ * - active   → Disable
+ * - disabled → Enable
  *
  * Reject is destructive, so it routes through a confirm dialog. All actions
  * invalidate the user list on success (handled in `useUserActions`).
@@ -35,7 +35,7 @@ export function UserActions({ user }: UserActionsProps) {
             disabled={busy}
             onClick={() => run("approve", user.id)}
           >
-            {busy ? "처리 중…" : "승인"}
+            {busy ? "Working…" : "Approve"}
           </Button>
           <Button
             type="button"
@@ -47,7 +47,7 @@ export function UserActions({ user }: UserActionsProps) {
               setConfirmReject(true);
             }}
           >
-            거부
+            Reject
           </Button>
         </>
       )}
@@ -60,7 +60,7 @@ export function UserActions({ user }: UserActionsProps) {
           disabled={busy}
           onClick={() => run("disable", user.id)}
         >
-          {busy ? "처리 중…" : "비활성"}
+          {busy ? "Working…" : "Disable"}
         </Button>
       )}
 
@@ -71,7 +71,7 @@ export function UserActions({ user }: UserActionsProps) {
           disabled={busy}
           onClick={() => run("enable", user.id)}
         >
-          {busy ? "처리 중…" : "활성"}
+          {busy ? "Working…" : "Enable"}
         </Button>
       )}
 
@@ -85,13 +85,13 @@ export function UserActions({ user }: UserActionsProps) {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="가입 거부 확인"
+          aria-label="Confirm rejection"
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
         >
           <div className="w-full rounded-t-md bg-white p-4 shadow-lg sm:w-80 sm:rounded-md">
             <p className="text-sm">
-              <span className="font-semibold">{user.username}</span> 님의 가입을
-              거부하시겠습니까?
+              Reject the signup for{" "}
+              <span className="font-semibold">{user.username}</span>?
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <Button
@@ -101,7 +101,7 @@ export function UserActions({ user }: UserActionsProps) {
                 disabled={busy}
                 onClick={() => setConfirmReject(false)}
               >
-                취소
+                Cancel
               </Button>
               <Button
                 type="button"
@@ -112,7 +112,7 @@ export function UserActions({ user }: UserActionsProps) {
                   if (ok) setConfirmReject(false);
                 }}
               >
-                {busy ? "처리 중…" : "거부"}
+                {busy ? "Working…" : "Reject"}
               </Button>
             </div>
           </div>

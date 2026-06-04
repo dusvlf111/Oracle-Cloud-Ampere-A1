@@ -21,15 +21,15 @@ export const BOOT_VOLUME_OPTIONS: SelectOption[] = [50, 100, 150, 200].map(
 );
 
 export const RETRY_INTERVAL_OPTIONS: SelectOption[] = [
-  { value: "30", label: "30초" },
-  { value: "60", label: "60초 (권장)" },
-  { value: "120", label: "120초" },
-  { value: "300", label: "300초" },
+  { value: "30", label: "30s" },
+  { value: "60", label: "60s (recommended)" },
+  { value: "120", label: "120s" },
+  { value: "300", label: "300s" },
 ];
 
-/** Empty value => 무제한 (unbounded retries; sent as undefined). */
+/** Empty value => unlimited (unbounded retries; sent as undefined). */
 export const MAX_ATTEMPTS_OPTIONS: SelectOption[] = [
-  { value: "", label: "무제한 (기본)" },
+  { value: "", label: "Unlimited (default)" },
   { value: "100", label: "100" },
   { value: "500", label: "500" },
   { value: "1000", label: "1000" },

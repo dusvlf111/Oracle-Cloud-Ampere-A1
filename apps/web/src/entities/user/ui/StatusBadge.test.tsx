@@ -6,9 +6,9 @@ import { StatusBadge } from "./StatusBadge";
 
 describe("StatusBadge", () => {
   it.each([
-    ["pending", "승인 대기"],
-    ["active", "활성"],
-    ["disabled", "비활성"],
+    ["pending", "Pending"],
+    ["active", "Active"],
+    ["disabled", "Disabled"],
   ])("renders the %s label", (status, label) => {
     render(<StatusBadge status={status} />);
     const badge = screen.getByTestId("user-status-badge");
@@ -24,8 +24,8 @@ describe("StatusBadge", () => {
 
 describe("RoleBadge", () => {
   it.each([
-    ["admin", "관리자"],
-    ["user", "사용자"],
+    ["admin", "Admin"],
+    ["user", "User"],
   ])("renders the %s label", (role, label) => {
     render(<RoleBadge role={role} />);
     const badge = screen.getByTestId("user-role-badge");

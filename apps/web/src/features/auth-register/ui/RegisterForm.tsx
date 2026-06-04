@@ -11,8 +11,8 @@ import { registerSchema, type RegisterValues } from "../model/schema";
 
 export interface RegisterFormProps {
   /**
-   * First-ever signup (`needs_setup`) renders the "관리자 계정 생성" copy and
-   * expects an auto-login; subsequent signups render "가입 신청".
+   * First-ever signup (`needs_setup`) renders the "Create admin account" copy
+   * and expects an auto-login; subsequent signups render "Sign up".
    */
   mode: "setup" | "signup";
   /** Called when the result is an active session (admin bootstrap auto-login). */
@@ -26,15 +26,15 @@ function messageForError(err: unknown): string {
     if (err.code === "rate_limited") {
       const retry = err.details?.["retry_after_sec"];
       return typeof retry === "number"
-        ? `시도가 너무 많습니다. ${retry}초 후 다시 시도하세요.`
-        : "시도가 너무 많습니다. 잠시 후 다시 시도하세요.";
+        ? `Too many attempts. Try again in ${retry}s.`
+        : "Too many attempts. Please try again later.";
     }
     if (err.code === "username_taken") {
-      return "이미 사용 중인 사용자명입니다.";
+      return "That username is already taken.";
     }
     return err.message;
   }
-  return "문제가 발생했습니다. 다시 시도해 주세요.";
+  return "Something went wrong. Please try again.";
 }
 
 export function RegisterForm({ mode, onAutoLogin, onPending }: RegisterFormProps) {
@@ -67,13 +67,13 @@ export function RegisterForm({ mode, onAutoLogin, onPending }: RegisterFormProps
     }
   });
 
-  const submitLabel = mode === "setup" ? "관리자 계정 생성" : "가입 신청";
-  const submittingLabel = mode === "setup" ? "계정 생성 중..." : "신청 중...";
+  const submitLabel = mode === "setup" ? "Create admin account" : "Sign up";
+  const submittingLabel = mode === "setup" ? "Creating account..." : "Submitting...";
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="username">사용자명</Label>
+        <Label htmlFor="username">Username</Label>
         <Input
           id="username"
           autoComplete="username"
@@ -88,7 +88,7 @@ export function RegisterForm({ mode, onAutoLogin, onPending }: RegisterFormProps
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label htmlFor="password">비밀번호</Label>
+        <Label htmlFor="password">Password</Label>
         <Input
           id="password"
           type="password"
@@ -104,7 +104,7 @@ export function RegisterForm({ mode, onAutoLogin, onPending }: RegisterFormProps
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label htmlFor="confirm">비밀번호 확인</Label>
+        <Label htmlFor="confirm">Confirm password</Label>
         <Input
           id="confirm"
           type="password"

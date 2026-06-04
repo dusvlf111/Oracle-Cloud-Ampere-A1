@@ -21,7 +21,7 @@ def test_create_and_read_log_entry(session: Session) -> None:
         timestamp=datetime(2026, 6, 3, 10, 30, 11),
         level="ERROR",
         logger="app.workers.config_task",
-        message="OCI 인증 오류",
+        message="OCI auth error",
         config_id=5,
         attempt_id=142,
         credential_id=1,

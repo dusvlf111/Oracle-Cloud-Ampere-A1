@@ -26,10 +26,10 @@ function messageForError(err: unknown): string {
       return "Invalid username or password.";
     }
     if (err.code === "account_pending") {
-      return "관리자 승인 대기 중입니다.";
+      return "Your account is pending admin approval.";
     }
     if (err.code === "account_disabled") {
-      return "비활성화된 계정입니다. 관리자에게 문의하세요.";
+      return "Account disabled. Please contact an administrator.";
     }
     return err.message;
   }

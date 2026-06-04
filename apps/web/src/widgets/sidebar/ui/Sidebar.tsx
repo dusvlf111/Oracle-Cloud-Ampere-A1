@@ -29,7 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/configs", label: "Configs", icon: ListChecks },
   { href: "/channels", label: "Channels", icon: Bell },
   { href: "/logs", label: "Logs", icon: ScrollText },
-  { href: "/users", label: "유저 관리", icon: Users, adminOnly: true },
+  { href: "/users", label: "Users", icon: Users, adminOnly: true },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {

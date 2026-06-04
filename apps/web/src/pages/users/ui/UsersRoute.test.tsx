@@ -33,7 +33,7 @@ describe("UsersRoute", () => {
     renderRoute();
 
     expect(
-      await screen.findByRole("heading", { name: /유저 관리/ }),
+      await screen.findByRole("heading", { name: /Users/ }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("users-access-denied")).toBeNull();
   });
@@ -50,7 +50,7 @@ describe("UsersRoute", () => {
       expect(screen.getByTestId("users-access-denied")).toBeInTheDocument(),
     );
     expect(
-      screen.getByRole("heading", { name: /접근 권한이 없습니다/ }),
+      screen.getByRole("heading", { name: /don't have permission/i }),
     ).toBeInTheDocument();
   });
 });

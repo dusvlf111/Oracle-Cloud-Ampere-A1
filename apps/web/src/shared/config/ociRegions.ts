@@ -1,6 +1,6 @@
 /**
  * Major OCI commercial regions offered as a dropdown in the credential form.
- * Not exhaustive — the form keeps a "직접 입력" (manual) toggle for the long
+ * Not exhaustive — the form keeps a "Manual input" toggle for the long
  * tail. `value` is the region identifier OCI expects (e.g. `ap-chuncheon-1`).
  */
 export interface OciRegionOption {

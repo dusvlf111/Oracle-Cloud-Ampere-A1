@@ -15,7 +15,7 @@ export interface SelectFieldProps {
   value: string;
   onChange: (value: string) => void;
   options: SelectOption[];
-  /** When true, render a "직접 입력" toggle that swaps to a free-text input. */
+  /** When true, render a "Manual input" toggle that swaps to a free-text input. */
   allowManual?: boolean;
   /** Helper hint shown below the control (e.g. Free Tier limits). */
   hint?: string;
@@ -28,7 +28,7 @@ const SELECT_CLASS =
   "min-h-11 w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-base sm:min-h-0 sm:appearance-auto sm:px-2 sm:py-1 sm:text-sm";
 
 /**
- * A static-option dropdown with an optional "직접 입력" (manual entry) toggle.
+ * A static-option dropdown with an optional "Manual input" (manual entry) toggle.
  * Used for the config form's fixed-choice fields (shape, OCPU, memory, boot
  * volume, retry interval, max attempts). Mirrors {@link MetaSelectField}'s
  * mobile-friendly sizing but with a caller-supplied option list.
@@ -61,7 +61,7 @@ export function SelectField({
             aria-pressed={useManual}
             onClick={() => setManual((m) => !m)}
           >
-            {useManual ? "목록에서 선택" : "직접 입력"}
+            {useManual ? "Choose from list" : "Manual input"}
           </button>
         )}
       </div>

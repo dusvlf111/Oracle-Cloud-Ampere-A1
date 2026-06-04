@@ -50,7 +50,7 @@ describe("useUserActions", () => {
     });
     expect(ok).toBe(false);
     await waitFor(() =>
-      expect(result.current.error).toMatch(/마지막 관리자/),
+      expect(result.current.error).toMatch(/last admin/),
     );
   });
 });

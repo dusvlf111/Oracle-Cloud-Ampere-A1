@@ -26,7 +26,7 @@ function PollingCard({ item }: { item: PollingStatusItem }) {
           {item.config_name}
         </span>
         <span className="text-sm text-gray-600">
-          <span className="text-gray-400">계정 </span>
+          <span className="text-gray-400">Account </span>
           {item.credential_name ?? "—"}
         </span>
       </div>
@@ -37,13 +37,13 @@ function PollingCard({ item }: { item: PollingStatusItem }) {
           <dd className="inline font-mono">{item.shape}</dd>
         </div>
         <div>
-          <dt className="inline text-gray-400">스펙 </dt>
+          <dt className="inline text-gray-400">Spec </dt>
           <dd className="inline">
             {item.ocpus} OCPU / {item.memory_gb} GB
           </dd>
         </div>
         <div>
-          <dt className="inline text-gray-400">간격 </dt>
+          <dt className="inline text-gray-400">Interval </dt>
           <dd className="inline">{item.retry_interval_sec}s</dd>
         </div>
       </dl>
@@ -58,11 +58,11 @@ function PollingCard({ item }: { item: PollingStatusItem }) {
               </span>
             </>
           ) : (
-            <span className="text-xs text-gray-500">아직 시도 없음</span>
+            <span className="text-xs text-gray-500">No attempts yet</span>
           )}
         </div>
         <span className="text-xs text-gray-600">
-          누적 <span className="font-semibold">{item.total_attempts}</span>회
+          <span className="font-semibold">{item.total_attempts}</span> attempts
         </span>
       </div>
     </li>
@@ -87,7 +87,7 @@ export function PollingStatus() {
     <section data-testid="polling-status" className="flex flex-col gap-3">
       <h2 className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
         <RefreshCw aria-hidden className="h-4 w-4 text-gray-400" />
-        폴링 중인 설정
+        Active polling
       </h2>
       {items.length > 0 ? (
         <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -101,7 +101,7 @@ export function PollingStatus() {
             data-testid="polling-empty"
             className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-400"
           >
-            활성화된 설정이 없습니다.
+            No active configs.
           </p>
         )
       )}

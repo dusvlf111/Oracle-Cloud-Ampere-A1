@@ -43,9 +43,9 @@ export function LoginPage() {
 
       {mode === "setup" && (
         <>
-          {/* First-ever signup keeps the original "관리자 계정 생성" framing and
-              auto-logs-in on success (PRD §6.1). */}
-          <h1 className="text-center text-2xl font-semibold">관리자 계정 생성</h1>
+          {/* First-ever signup keeps the original "Create admin account" framing
+              and auto-logs-in on success (PRD §6.1). */}
+          <h1 className="text-center text-2xl font-semibold">Create admin account</h1>
           <RegisterForm mode="setup" onAutoLogin={goHome} />
         </>
       )}
@@ -55,13 +55,13 @@ export function LoginPage() {
           <h1 className="text-center text-2xl font-semibold">Sign in</h1>
           <LoginForm onSuccess={goHome} />
           <p className="text-center text-sm text-gray-600">
-            계정이 없으신가요?{" "}
+            Don&apos;t have an account?{" "}
             <button
               type="button"
               className="font-medium text-blue-700 underline"
               onClick={() => setMode("signup")}
             >
-              가입 신청
+              Sign up
             </button>
           </p>
         </>
@@ -69,7 +69,7 @@ export function LoginPage() {
 
       {mode === "signup" && (
         <>
-          <h1 className="text-center text-2xl font-semibold">가입 신청</h1>
+          <h1 className="text-center text-2xl font-semibold">Sign up</h1>
           <RegisterForm
             mode="signup"
             onAutoLogin={goHome}
@@ -84,7 +84,7 @@ export function LoginPage() {
             className="min-h-11"
             onClick={() => setMode("login")}
           >
-            로그인 화면으로
+            Back to sign in
           </Button>
         </>
       )}
