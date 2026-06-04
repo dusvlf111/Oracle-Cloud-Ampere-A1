@@ -248,7 +248,7 @@ async def poll_once(
                 _disable_config(session, config_id)
                 payload = _build_payload(
                     NotifyKind.WARNING,
-                    f"⏹️ 최대 시도 횟수({config.max_attempts}회) 도달로 자동 중지",
+                    f"⚠️ 최대 시도 횟수({config.max_attempts}회) 도달로 자동 중지",
                     config=config,
                     credential=credential,
                     error=f"attempts={made}/{config.max_attempts}",
