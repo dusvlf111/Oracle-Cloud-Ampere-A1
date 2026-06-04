@@ -15,7 +15,7 @@ URL = f"{SERVER}/{TOPIC}"
 async def test_ntfy_headers_and_body(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(url=URL, status_code=200)
     payload = NotificationPayload(
-        kind=NotifyKind.SUCCESS, title="성공", body="본문", tags=["rocket"]
+        kind=NotifyKind.SUCCESS, title="Success", body="Body", tags=["rocket"]
     )
     cfg = {
         "server_url": SERVER,
@@ -30,11 +30,11 @@ async def test_ntfy_headers_and_body(httpx_mock: HTTPXMock) -> None:
     assert str(req.url) == URL
     # Non-ASCII title is transmitted as UTF-8 bytes (ntfy decodes UTF-8).
     raw = dict(req.headers.raw)
-    assert raw[b"Title"].decode("utf-8") == "성공"
+    assert raw[b"Title"].decode("utf-8") == "Success"
     assert req.headers["Priority"] == "4"
     assert raw[b"Tags"].decode("utf-8") == "rocket,oracle"
     assert req.headers["Authorization"] == "Bearer tk_secret"
-    assert req.content == "본문".encode()
+    assert req.content == "Body".encode()
 
 
 async def test_ntfy_priority_defaults_to_kind(httpx_mock: HTTPXMock) -> None:

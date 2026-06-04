@@ -185,8 +185,8 @@ async def test_channel(
     ch = _get_or_404(session, channel_id, user)
     payload = NotificationPayload(
         kind=NotifyKind.INFO,
-        title="테스트 알림",
-        body=f"채널 '{ch.name}' 발송 테스트입니다.",
+        title="Test notification",
+        body=f"Test delivery for channel '{ch.name}'.",
         tags=["test"],
     )
     try:
