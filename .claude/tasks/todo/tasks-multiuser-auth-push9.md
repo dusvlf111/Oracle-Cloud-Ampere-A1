@@ -44,9 +44,9 @@
     - [x] 9.2 회원가입 API — `POST /api/auth/register` (rate limit 5/min/IP 재사용): 최초 유저 → admin/active + 자동 로그인 (기존 setup 동작 흡수, `/api/auth/setup` 은 register 위임 wrapper 로 deprecated 유지), 이후 → user/pending 201 세션 미발급, 중복 409 `username_taken`. `services/auth.py` 를 AppSetting → User 테이블 기반으로 전환, conftest fixture 일괄 전환
         - [x] 9.2.T1 pytest 테스트 작성 — 최초 가입=admin 자동로그인, 2번째 가입=pending 무세션, 중복 409, rate limit 429, setup 하위호환
         - [x] 9.2.T2 `uv run pytest -q tests/api/test_auth_register.py tests/api/test_auth_setup.py` 실행 및 검증
-    - [ ] 9.3 로그인 status 분기 + 세션 확장 — pending → 403 `account_pending`, disabled → 403 `account_disabled`, active 만 세션 발급. 세션에 `user_id`/`role` 저장, `GET /api/auth/me` → `{username, role, status}`, `require_login` 이 User 객체 반환하도록 확장
-        - [ ] 9.3.T1 pytest 테스트 작성 — pending/disabled 로그인 403 (코드 구분), active 성공, me 응답 role 포함, 기존 세션 하위호환 (재로그인 요구)
-        - [ ] 9.3.T2 `uv run pytest -q tests/api/test_auth.py` 실행 및 검증
+    - [x] 9.3 로그인 status 분기 + 세션 확장 — pending → 403 `account_pending`, disabled → 403 `account_disabled`, active 만 세션 발급. 세션에 `user_id`/`role` 저장, `GET /api/auth/me` → `{username, role, status}`, `require_login` 이 User 객체 반환하도록 확장
+        - [x] 9.3.T1 pytest 테스트 작성 — pending/disabled 로그인 403 (코드 구분), active 성공, me 응답 role 포함, 기존 세션 하위호환 (재로그인 요구)
+        - [x] 9.3.T2 `uv run pytest -q tests/api/test_auth.py` 실행 및 검증
     - [ ] 9.4 유저 관리 API — `api/users.py` (admin 전용): `GET /api/users`, `POST /{id}/approve|reject|disable|enable`. 마지막 admin disable 금지 409, disable 시 해당 유저 세션 무효화 기반 마련 + 소유 config 전체 `enabled=False` (supervisor 자동 cancel), reject 는 pending 만 삭제 가능
         - [ ] 9.4.T1 pytest 테스트 작성 — 승인→로그인 가능, 거부→삭제, disable→config 비활성+로그인 차단, enable 복구, 마지막 admin 보호, user 권한으로 접근 시 403/404
         - [ ] 9.4.T2 `uv run pytest -q tests/api/test_users.py` 실행 및 검증
