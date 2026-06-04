@@ -44,13 +44,33 @@ function formatTime(iso: string | undefined): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
 }
 
+/** "이름 (#id)" when the joined config name is present, else the bare id. */
+function formatConfigLabel(name: string | null | undefined, id: number): string {
+  return name ? `${name} (#${id})` : `#${id}`;
+}
+
 const columns: ColumnDef<Attempt>[] = [
   {
     header: "Time",
     accessorKey: "attempted_at",
     cell: ({ getValue }) => formatTime(getValue<string>()),
   },
-  { header: "Config", accessorKey: "config_id" },
+  {
+    header: "Config",
+    id: "config",
+    cell: ({ row }) => (
+      <div className="flex flex-col">
+        <span className="text-gray-800">
+          {formatConfigLabel(row.original.config_name, row.original.config_id)}
+        </span>
+        {row.original.credential_name && (
+          <span className="text-xs text-gray-500">
+            {row.original.credential_name}
+          </span>
+        )}
+      </div>
+    ),
+  },
   {
     header: "Status",
     accessorKey: "status",

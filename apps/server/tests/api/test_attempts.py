@@ -100,3 +100,40 @@ async def test_limit_validation(
 ) -> None:
     resp = await authed_db_client.get("/api/attempts?limit=0")
     assert resp.status_code == 422
+
+
+async def test_includes_config_and_credential_names(
+    authed_db_client: AsyncClient, seed_attempts
+) -> None:
+    resp = await authed_db_client.get(
+        f"/api/attempts?config_id={seed_attempts['cfg1']}"
+    )
+    assert resp.status_code == 200
+    items = resp.json()
+    assert items, "expected at least one attempt"
+    for item in items:
+        assert item["config_name"] == "c1"
+        assert item["credential_name"] == "acct"
+
+
+async def test_names_none_when_config_deleted(
+    authed_db_client: AsyncClient, session: Session, seed_attempts
+) -> None:
+    # Simulate a stale attempt whose config row no longer exists: delete the
+    # config directly via SQL (bypassing the ORM's delete-orphan cascade) so an
+    # orphaned attempt survives. The LEFT JOIN must still surface it with both
+    # names null (PRD §7.4 — "config 삭제된 경우 None 허용").
+    cfg1 = seed_attempts["cfg1"]
+    conn = session.connection()
+    conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+    conn.exec_driver_sql("DELETE FROM instanceconfig WHERE id = ?", (cfg1,))
+    session.commit()
+
+    resp = await authed_db_client.get(f"/api/attempts?config_id={cfg1}")
+    assert resp.status_code == 200
+    items = resp.json()
+    assert items, "orphaned attempts should still be returned"
+    for item in items:
+        assert item["config_id"] == cfg1
+        assert item["config_name"] is None
+        assert item["credential_name"] is None

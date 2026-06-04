@@ -44,9 +44,14 @@ export function AttemptCardList({ attempts }: AttemptCardListProps) {
             <span className="text-xs text-gray-500">{formatTime(a.attempted_at)}</span>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-            <span>
-              <span className="text-gray-400">Config </span>
-              {a.config_id}
+            <span className="flex flex-col">
+              <span>
+                <span className="text-gray-400">Config </span>
+                {a.config_name ? `${a.config_name} (#${a.config_id})` : `#${a.config_id}`}
+              </span>
+              {a.credential_name && (
+                <span className="text-gray-400">계정 {a.credential_name}</span>
+              )}
             </span>
             <span>
               <span className="text-gray-400">Duration </span>
