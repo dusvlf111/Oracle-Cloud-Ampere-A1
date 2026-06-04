@@ -36,6 +36,7 @@ import logging
 import time
 from datetime import datetime, timezone
 
+from sqlalchemy import func
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 from tenacity import (
@@ -230,6 +231,31 @@ async def poll_once(
         passphrase = _load_passphrase(credential)
         cred_id = credential.id
 
+        # max_attempts cap (PRD §7.2): when set, stop polling once the config
+        # has accumulated that many attempts — disable + notify, no new launch.
+        if config.max_attempts is not None:
+            made = session.exec(
+                select(func.count())
+                .select_from(Attempt)
+                .where(Attempt.config_id == config_id)
+            ).one()
+            if made >= config.max_attempts:
+                logger.warning(
+                    "최대 시도 횟수(%s) 도달 — config 자동 비활성화",
+                    config.max_attempts,
+                    extra={"config_id": config_id, "credential_id": cred_id},
+                )
+                _disable_config(session, config_id)
+                payload = _build_payload(
+                    NotifyKind.WARNING,
+                    f"⏹️ 최대 시도 횟수({config.max_attempts}회) 도달로 자동 중지",
+                    config=config,
+                    credential=credential,
+                    error=f"attempts={made}/{config.max_attempts}",
+                )
+                await _notify(session, config, credential, payload)
+                return "max_attempts", 1.0
+
         async with oci_slots(cred_id):
             started = time.monotonic()
             logger.info(
@@ -370,7 +396,13 @@ async def run_config_task(engine: Engine, config_id: int) -> None:
     try:
         while True:
             status, multiplier = await poll_once(engine, config_id)
-            if status in {"success", "auth_error", "config_error", "stopped"}:
+            if status in {
+                "success",
+                "auth_error",
+                "config_error",
+                "max_attempts",
+                "stopped",
+            }:
                 logger.info(
                     "config task 종료 status=%s",
                     status,

@@ -13,7 +13,7 @@ All OCI calls are mocked — no real launch ever happens. Covers:
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import oci.exceptions as oe
 import pytest
@@ -393,3 +393,66 @@ async def test_success_notifies_all_channels_one_failure_isolated(engine, app_se
     with Session(engine) as s:
         cfg = s.get(InstanceConfig, cfg_id)
         assert cfg.enabled is False
+
+
+async def test_max_attempts_reached_disables_notifies_and_stops(
+    engine, app_secret, monkeypatch
+):
+    """max_attempts cap: once the config has that many attempts, the worker
+    disables it and notifies instead of launching again (PRD §7.2)."""
+    with Session(engine) as s:
+        cred = _make_credential(s)
+        cfg = _make_config(s, cred, max_attempts=2)
+        ch = NotificationChannel(
+            name="ntfy-cap",
+            type="ntfy",
+            config_enc=encrypt_json({"server_url": "https://n", "topic": "t"}),
+        )
+        s.add(ch)
+        s.commit()
+        s.refresh(ch)
+        s.add(ConfigChannelLink(config_id=cfg.id, channel_id=ch.id))
+        # Two attempts already on record → the cap is reached.
+        s.add(Attempt(config_id=cfg.id, status="out_of_capacity"))
+        s.add(Attempt(config_id=cfg.id, status="out_of_capacity"))
+        s.commit()
+        cfg_id = cfg.id
+
+    launch = MagicMock()
+    monkeypatch.setattr(ct.oci_client, "launch_instance_sync", launch)
+    notify = AsyncMock()
+    monkeypatch.setattr(ct, "fan_out", notify)
+
+    status, mult = await ct.poll_once(engine, cfg_id)
+
+    assert status == "max_attempts"
+    assert mult == 1.0
+    launch.assert_not_called()  # no further OCI call past the cap
+    notify.assert_awaited_once()
+    payload = notify.await_args.args[1]
+    assert "최대 시도 횟수" in payload.title
+    with Session(engine) as s:
+        assert s.get(InstanceConfig, cfg_id).enabled is False
+
+
+async def test_max_attempts_none_is_unlimited(engine, app_secret, monkeypatch):
+    """max_attempts=None (default) never trips the cap, however many attempts."""
+    with Session(engine) as s:
+        cred = _make_credential(s)
+        cfg = _make_config(s, cred)  # max_attempts defaults to None
+        for _ in range(5):
+            s.add(Attempt(config_id=cfg.id, status="out_of_capacity"))
+        s.commit()
+        cfg_id = cfg.id
+
+    def _raise(*a, **k):
+        raise _service_error(500, "InternalError", "Out of host capacity")
+
+    monkeypatch.setattr(ct.oci_client, "launch_instance_sync", _raise)
+    monkeypatch.setattr(ct, "fan_out", AsyncMock())
+
+    status, _ = await ct.poll_once(engine, cfg_id)
+
+    assert status == "out_of_capacity"  # still polling, cap never applies
+    with Session(engine) as s:
+        assert s.get(InstanceConfig, cfg_id).enabled is True
