@@ -18,8 +18,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Response
 from sqlmodel import Session, select
 
-from app.api.deps import AppError, require_login
-from app.db.models import NotificationChannel
+from app.api.deps import AppError, is_admin, require_login
+from app.db.models import NotificationChannel, User
 from app.db.session import get_session
 from app.schemas.channel import (
     ChannelCreate,
@@ -36,9 +36,12 @@ logger = logging.getLogger("app.api.channels")
 router = APIRouter(prefix="/api/channels", tags=["channels"])
 
 
-def _get_or_404(session: Session, channel_id: int) -> NotificationChannel:
+def _get_or_404(
+    session: Session, channel_id: int, user: User
+) -> NotificationChannel:
     ch = session.get(NotificationChannel, channel_id)
-    if ch is None:
+    # Hide other owners' channels behind a 404 (PRD §6.3).
+    if ch is None or (not is_admin(user) and ch.owner_id != user.id):
         raise AppError(
             "channel_not_found",
             404,
@@ -102,19 +105,20 @@ def _validate_type_match(body: ChannelCreate | ChannelUpdate) -> dict:
 
 @router.get("", response_model=list[ChannelRead])
 def list_channels(
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> list[ChannelRead]:
-    rows = session.exec(
-        select(NotificationChannel).order_by(NotificationChannel.id)
-    ).all()
+    stmt = select(NotificationChannel).order_by(NotificationChannel.id)
+    if not is_admin(user):
+        stmt = stmt.where(NotificationChannel.owner_id == user.id)
+    rows = session.exec(stmt).all()
     return [ChannelRead.from_model(c, decrypt_json(c.config_enc)) for c in rows]
 
 
 @router.post("", response_model=ChannelRead, status_code=201)
 def create_channel(
     body: ChannelCreate,
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> ChannelRead:
     cfg = _validate_type_match(body)
@@ -123,6 +127,7 @@ def create_channel(
         type=body.type,
         enabled=body.enabled,
         config_enc=encrypt_json(cfg),
+        owner_id=user.id,
     )
     session.add(ch)
     session.commit()
@@ -135,10 +140,10 @@ def create_channel(
 def update_channel(
     channel_id: int,
     body: ChannelUpdate,
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> ChannelRead:
-    ch = _get_or_404(session, channel_id)
+    ch = _get_or_404(session, channel_id, user)
     cfg = _validate_type_match(body)
     # When the type is unchanged, let blank/masked sensitive fields fall back to
     # the stored secret so the masked GET echo can be PUT back unchanged. If the
@@ -161,10 +166,10 @@ def update_channel(
 @router.delete("/{channel_id}", status_code=204)
 def delete_channel(
     channel_id: int,
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> Response:
-    ch = _get_or_404(session, channel_id)
+    ch = _get_or_404(session, channel_id, user)
     session.delete(ch)
     session.commit()
     logger.info("NotificationChannel deleted", extra={"channel_id": channel_id})
@@ -174,10 +179,10 @@ def delete_channel(
 @router.post("/{channel_id}/test", response_model=TestSendResponse)
 async def test_channel(
     channel_id: int,
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> TestSendResponse:
-    ch = _get_or_404(session, channel_id)
+    ch = _get_or_404(session, channel_id, user)
     payload = NotificationPayload(
         kind=NotifyKind.INFO,
         title="테스트 알림",

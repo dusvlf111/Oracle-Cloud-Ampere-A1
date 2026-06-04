@@ -112,3 +112,10 @@ def require_admin(user: User = Depends(require_login)) -> User:
     if user.role != ROLE_ADMIN:
         raise AppError("forbidden", 403, "Admin privileges required")
     return user
+
+
+def is_admin(user: User) -> bool:
+    """True iff the user is an admin (sees every owner's resources)."""
+    from app.services.auth import ROLE_ADMIN
+
+    return user.role == ROLE_ADMIN

@@ -50,9 +50,9 @@
     - [x] 9.4 유저 관리 API — `api/users.py` (admin 전용): `GET /api/users`, `POST /{id}/approve|reject|disable|enable`. 마지막 admin disable 금지 409, disable 시 해당 유저 세션 무효화 기반 마련 + 소유 config 전체 `enabled=False` (supervisor 자동 cancel), reject 는 pending 만 삭제 가능
         - [x] 9.4.T1 pytest 테스트 작성 — 승인→로그인 가능, 거부→삭제, disable→config 비활성+로그인 차단, enable 복구, 마지막 admin 보호, user 권한으로 접근 시 403/404
         - [x] 9.4.T2 `uv run pytest -q tests/api/test_users.py` 실행 및 검증
-    - [ ] 9.5 리소스 소유권 스코프 (CRUD) — `require_admin` dependency, credentials/configs/channels 의 목록·단건·수정·삭제에 `owner_id` 필터 (admin 전체), 생성 시 owner 자동 지정, 타인 리소스 → 404 은닉, config↔channel 연결은 동일 소유자만 422
-        - [ ] 9.5.T1 pytest 테스트 작성 — `tests/api/test_ownership_scope.py`: user A/B 교차 접근 404, admin 전체 조회, 타 소유자 채널 연결 거부
-        - [ ] 9.5.T2 `uv run pytest -q tests/api/test_ownership_scope.py tests/api/test_credentials.py tests/api/test_configs.py tests/api/test_channels.py` 실행 및 검증
+    - [x] 9.5 리소스 소유권 스코프 (CRUD) — `require_admin` dependency, credentials/configs/channels 의 목록·단건·수정·삭제에 `owner_id` 필터 (admin 전체), 생성 시 owner 자동 지정, 타인 리소스 → 404 은닉, config↔channel 연결은 동일 소유자만 422
+        - [x] 9.5.T1 pytest 테스트 작성 — `tests/api/test_ownership_scope.py`: user A/B 교차 접근 404, admin 전체 조회, 타 소유자 채널 연결 거부
+        - [x] 9.5.T2 `uv run pytest -q tests/api/test_ownership_scope.py tests/api/test_credentials.py tests/api/test_configs.py tests/api/test_channels.py` 실행 및 검증
     - [ ] 9.6 조회 계열 스코프 — attempts/status(polling)/logs/SSE: user 는 본인 config_id 집합 기준 서버측 필터, admin 전체. meta 조회는 본인 credential 만
         - [ ] 9.6.T1 pytest 테스트 작성 — attempts/폴링현황/logs/SSE 스코프 (A 의 로그가 B 에게 안 보임), meta credential 404
         - [ ] 9.6.T2 `uv run pytest -q` 전체 + 커버리지 70%+ 게이트 실행 및 검증
