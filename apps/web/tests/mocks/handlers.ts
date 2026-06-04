@@ -21,6 +21,12 @@ export const handlers = [
   http.get(`${API}/configs`, () => HttpResponse.json([])),
   http.get(`${API}/channels`, () => HttpResponse.json([])),
   http.get(`${API}/attempts`, () => HttpResponse.json([])),
+
+  // OCI meta lookups (PRD §8). Default empty so config-create mounts without
+  // tripping `onUnhandledRequest: 'error'`; per-test suites override these.
+  http.get(`${API}/meta/availability-domains`, () => HttpResponse.json([])),
+  http.get(`${API}/meta/images`, () => HttpResponse.json([])),
+  http.get(`${API}/meta/subnets`, () => HttpResponse.json([])),
 ];
 
 /** Standard error envelope helper for tests (PRD §8). */

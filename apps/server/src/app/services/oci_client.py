@@ -20,6 +20,8 @@ import logging
 from dataclasses import dataclass
 
 import oci
+import oci.core
+import oci.identity
 from oci import exceptions as oci_exceptions
 
 logger = logging.getLogger("app.services.oci_client")
@@ -132,6 +134,97 @@ def launch_instance_sync(config: dict, details) -> str:
     client = ComputeClient(config)
     response = client.launch_instance(details)
     return response.data.id
+
+
+# ---------------------------------------------------------------------------
+# Metadata lookup helpers (PRD §7.2, §8 /api/meta/*).
+#
+# Unlike :func:`verify` these RAISE on OCI failure so the router can classify
+# the exception (auth → 502 oci_auth_error, else → 502 oci_request_failed).
+# The blocking SDK calls run inside ``asyncio.to_thread``. ``oci.*`` clients are
+# accessed via the module attribute (``oci.core.ComputeClient`` etc.) so tests
+# can monkeypatch them without a real OCI call ever escaping.
+# ---------------------------------------------------------------------------
+
+
+def list_availability_domains_sync(config: dict) -> list[str]:
+    """Blocking ``ListAvailabilityDomains`` → AD names (compartment = tenancy)."""
+    client = oci.identity.IdentityClient(config)
+    response = client.list_availability_domains(compartment_id=config["tenancy"])
+    return [ad.name for ad in response.data]
+
+
+def list_images_sync(config: dict, shape: str) -> list[dict]:
+    """Blocking ``ListImages`` filtered by ``shape`` (ARM-compatible only).
+
+    ``shape`` makes OCI return only images that support that shape, so passing
+    ``VM.Standard.A1.Flex`` yields ARM64 boot images. Newest 50 by create time.
+    """
+    client = oci.core.ComputeClient(config)
+    response = client.list_images(
+        compartment_id=config["tenancy"],
+        shape=shape,
+        sort_by="TIMECREATED",
+        sort_order="DESC",
+        limit=50,
+    )
+    return [
+        {
+            "ocid": img.id,
+            "display_name": img.display_name,
+            "operating_system": img.operating_system,
+            "os_version": img.operating_system_version,
+        }
+        for img in response.data
+    ]
+
+
+def list_subnets_sync(config: dict) -> list[dict]:
+    """Blocking ``ListSubnets`` (compartment = tenancy root)."""
+    client = oci.core.VirtualNetworkClient(config)
+    response = client.list_subnets(compartment_id=config["tenancy"])
+    return [
+        {
+            "ocid": subnet.id,
+            "display_name": subnet.display_name,
+            "cidr_block": subnet.cidr_block,
+        }
+        for subnet in response.data
+    ]
+
+
+async def fetch_availability_domains(
+    cred: dict,
+    *,
+    key_file: str | None = None,
+    passphrase: str | None = None,
+) -> list[str]:
+    """Async wrapper for AD lookup. Raises on OCI failure (caller classifies)."""
+    config = build_config(cred, key_file=key_file, passphrase=passphrase)
+    return await asyncio.to_thread(list_availability_domains_sync, config)
+
+
+async def fetch_images(
+    cred: dict,
+    shape: str,
+    *,
+    key_file: str | None = None,
+    passphrase: str | None = None,
+) -> list[dict]:
+    """Async wrapper for image lookup. Raises on OCI failure."""
+    config = build_config(cred, key_file=key_file, passphrase=passphrase)
+    return await asyncio.to_thread(list_images_sync, config, shape)
+
+
+async def fetch_subnets(
+    cred: dict,
+    *,
+    key_file: str | None = None,
+    passphrase: str | None = None,
+) -> list[dict]:
+    """Async wrapper for subnet lookup. Raises on OCI failure."""
+    config = build_config(cred, key_file=key_file, passphrase=passphrase)
+    return await asyncio.to_thread(list_subnets_sync, config)
 
 
 async def verify(
