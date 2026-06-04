@@ -20,6 +20,7 @@ from app.db.models import (
     InstanceConfig,
     NotificationChannel,
     OciCredential,
+    User,
 )
 
 
@@ -38,7 +39,22 @@ class InstanceConfigFactory(ModelFactory[InstanceConfig]):
     max_attempts = None
 
 
+def _make_owner(session: Session, username: str = "owner") -> User:
+    """Persist a User to satisfy the ``owner_id`` FK (PRD §5)."""
+    user = User(
+        username=username, password_hash="h", role="admin", status="active"
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
 def _make_credential(session: Session, **overrides) -> OciCredential:
+    if "owner_id" not in overrides:
+        overrides["owner_id"] = _make_owner(
+            session, f"owner-{overrides.get('name', 'x')}"
+        ).id
     cred = OciCredentialFactory.build(**overrides)
     cred.id = None
     session.add(cred)
@@ -48,6 +64,10 @@ def _make_credential(session: Session, **overrides) -> OciCredential:
 
 
 def _make_config(session: Session, credential_id: int, **overrides) -> InstanceConfig:
+    if "owner_id" not in overrides:
+        # Reuse the credential's owner for consistency.
+        cred = session.get(OciCredential, credential_id)
+        overrides["owner_id"] = cred.owner_id
     cfg = InstanceConfigFactory.build(credential_id=credential_id, **overrides)
     cfg.id = None
     session.add(cfg)
@@ -71,8 +91,9 @@ def test_config_channel_many_to_many(session: Session) -> None:
     cred = _make_credential(session, name="acct-b")
     cfg = _make_config(session, cred.id, name="cfg-m2m")
 
-    ch1 = NotificationChannel(name="disc", type="discord", config_enc="x")
-    ch2 = NotificationChannel(name="ntfy", type="ntfy", config_enc="y")
+    oid = cred.owner_id
+    ch1 = NotificationChannel(name="disc", type="discord", config_enc="x", owner_id=oid)
+    ch2 = NotificationChannel(name="ntfy", type="ntfy", config_enc="y", owner_id=oid)
     cfg.notification_channels.extend([ch1, ch2])
     session.add(cfg)
     session.commit()
@@ -105,9 +126,14 @@ def test_attempt_to_config_relationship(session: Session) -> None:
 def test_channel_name_unique(session: Session) -> None:
     from sqlalchemy.exc import IntegrityError
 
-    session.add(NotificationChannel(name="dup", type="ntfy", config_enc="a"))
+    oid = _make_owner(session, "ch-owner").id
+    session.add(
+        NotificationChannel(name="dup", type="ntfy", config_enc="a", owner_id=oid)
+    )
     session.commit()
-    session.add(NotificationChannel(name="dup", type="discord", config_enc="b"))
+    session.add(
+        NotificationChannel(name="dup", type="discord", config_enc="b", owner_id=oid)
+    )
     with pytest.raises(IntegrityError):
         session.commit()
     session.rollback()
