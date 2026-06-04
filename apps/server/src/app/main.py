@@ -24,6 +24,7 @@ from app.api import configs as configs_api
 from app.api import credentials as credentials_api
 from app.api import logs as logs_api
 from app.api import meta as meta_api
+from app.api import status as status_api
 from app.api.deps import RequestIdMiddleware
 from app.api.errors import rate_limit_handler, register_error_handlers
 from app.api.ratelimit import limiter
@@ -98,6 +99,7 @@ app.include_router(channels_api.router)
 app.include_router(attempts_api.router)
 app.include_router(logs_api.router)
 app.include_router(meta_api.router)
+app.include_router(status_api.router)
 
 
 @app.get("/healthz", tags=["meta"])
