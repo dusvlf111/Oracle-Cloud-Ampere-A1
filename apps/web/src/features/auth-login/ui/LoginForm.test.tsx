@@ -66,7 +66,7 @@ describe("LoginForm", () => {
     await fill(user);
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(await screen.findByText(/관리자 승인 대기 중입니다/)).toBeInTheDocument();
+    expect(await screen.findByText(/pending admin approval/i)).toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
@@ -86,7 +86,7 @@ describe("LoginForm", () => {
     await fill(user);
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(await screen.findByText(/비활성화된 계정입니다/)).toBeInTheDocument();
+    expect(await screen.findByText(/Account disabled/i)).toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();
   });
 

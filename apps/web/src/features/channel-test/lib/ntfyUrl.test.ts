@@ -41,12 +41,12 @@ describe("parseNtfyUrl", () => {
   it("throws when the topic segment is missing (origin only)", () => {
     expect(() => parseNtfyUrl("https://ntfy.sh")).toThrow(NtfyUrlError);
     expect(() => parseNtfyUrl("https://ntfy.sh/")).toThrow(
-      /토픽이 없습니다/,
+      /Missing topic/,
     );
   });
 
   it("throws on empty input", () => {
-    expect(() => parseNtfyUrl("   ")).toThrow(/토픽이 없습니다/);
+    expect(() => parseNtfyUrl("   ")).toThrow(/Missing topic/);
   });
 
   it("throws on a non-URL string", () => {
@@ -55,7 +55,7 @@ describe("parseNtfyUrl", () => {
 
   it("throws on a non-http(s) protocol", () => {
     expect(() => parseNtfyUrl("ftp://ntfy.sh/topic")).toThrow(
-      /올바른 URL/,
+      /Invalid URL/,
     );
   });
 });

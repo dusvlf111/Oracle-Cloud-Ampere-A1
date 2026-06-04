@@ -212,11 +212,11 @@ describe("ConfigCreateForm", () => {
     expect(retry.value).toBe("60");
 
     const maxAttempts = screen.getByLabelText("Max attempts") as HTMLSelectElement;
-    // 무제한 default → empty value.
+    // Unlimited default → empty value.
     expect(maxAttempts.value).toBe("");
 
-    // OCPU×6 memory hint reflects the default 4 OCPUs.
-    expect(screen.getByText(/권장: OCPU×6 = 24 GB/)).toBeInTheDocument();
+    // OCPU × 6 memory hint reflects the default 4 OCPUs.
+    expect(screen.getByText(/Recommended: OCPU × 6 = 24 GB/)).toBeInTheDocument();
   });
 
   it("submits dropdown selections (ocpu/memory/boot/retry/max) as numbers", async () => {
@@ -379,7 +379,7 @@ describe("ConfigCreateForm", () => {
 
     // Image lookup error surfaces and forces manual input.
     expect(
-      await screen.findByText(/OCI 조회 실패/),
+      await screen.findByText(/OCI lookup failed/),
     ).toBeInTheDocument();
 
     // The Image field is now a free-text input (role textbox), not a select.

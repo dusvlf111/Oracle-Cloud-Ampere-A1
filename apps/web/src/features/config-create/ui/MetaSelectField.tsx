@@ -33,7 +33,7 @@ const SELECT_CLASS =
 
 /**
  * A meta-driven field that renders a dropdown of OCI-fetched options with a
- * "직접 입력" (manual entry) fallback. The manual toggle is auto-enabled when the
+ * "Manual input" (manual entry) fallback. The manual toggle is auto-enabled when the
  * lookup fails so a different-compartment / 502 case never blocks the user.
  */
 export function MetaSelectField({
@@ -71,7 +71,7 @@ export function MetaSelectField({
             aria-pressed={useManual}
             onClick={() => setManual((m) => !m)}
           >
-            {useManual ? "목록에서 선택" : "직접 입력"}
+            {useManual ? "Choose from list" : "Manual input"}
           </button>
         )}
       </div>
@@ -93,7 +93,7 @@ export function MetaSelectField({
           onChange={(e) => onChange(e.target.value)}
         >
           <option value="">
-            {isLoading ? "불러오는 중…" : `${label} 선택…`}
+            {isLoading ? "Loading…" : `Select ${label}…`}
           </option>
           {options.map((o) => (
             <option key={o.value} value={o.value}>
@@ -105,12 +105,12 @@ export function MetaSelectField({
 
       {!hasCredential && (
         <p className="text-xs text-gray-500">
-          먼저 자격증명을 선택하세요.
+          Select a credential first.
         </p>
       )}
       {isError && (
         <p role="status" className="text-xs text-amber-600">
-          OCI 조회 실패 — 직접 입력으로 전환했습니다.
+          OCI lookup failed — switched to manual input.
         </p>
       )}
       {errorMessage && (

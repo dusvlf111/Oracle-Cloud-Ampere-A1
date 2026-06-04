@@ -234,7 +234,7 @@ export function ConfigCreateForm({
             value={String(field.value ?? "")}
             onChange={(v) => field.onChange(v)}
             options={OCPU_OPTIONS}
-            hint="Free Tier 한도: 4 OCPU"
+            hint="Free Tier limit: 4 OCPUs"
             errorMessage={errors.ocpus?.message as string}
           />
         )}
@@ -252,8 +252,8 @@ export function ConfigCreateForm({
             options={MEMORY_OPTIONS}
             hint={
               ocpus > 0
-                ? `권장: OCPU×6 = ${ocpus * 6} GB`
-                : "권장: OCPU당 6 GB"
+                ? `Recommended: OCPU × 6 = ${ocpus * 6} GB`
+                : "Recommended: 6 GB per OCPU"
             }
             errorMessage={errors.memory_gb?.message as string}
           />
@@ -270,7 +270,7 @@ export function ConfigCreateForm({
             value={String(field.value ?? "")}
             onChange={(v) => field.onChange(v)}
             options={BOOT_VOLUME_OPTIONS}
-            hint="Free Tier 총 200 GB 한도"
+            hint="Free Tier total limit: 200 GB"
             errorMessage={errors.boot_volume_gb?.message as string}
           />
         )}

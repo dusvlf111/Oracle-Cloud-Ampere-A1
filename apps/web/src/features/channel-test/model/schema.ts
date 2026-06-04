@@ -25,7 +25,7 @@ const ntfyUrlField = z.string().superRefine((value, ctx) => {
       message:
         err instanceof NtfyUrlError
           ? err.message
-          : "올바른 ntfy URL 이 아닙니다",
+          : "Invalid ntfy URL",
     });
   }
 });

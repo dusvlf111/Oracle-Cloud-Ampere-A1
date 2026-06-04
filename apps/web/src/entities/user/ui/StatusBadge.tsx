@@ -8,9 +8,9 @@ export interface StatusBadgeProps {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: "승인 대기",
-  active: "활성",
-  disabled: "비활성",
+  pending: "Pending",
+  active: "Active",
+  disabled: "Disabled",
 };
 
 const STATUS_STYLES: Record<string, string> = {

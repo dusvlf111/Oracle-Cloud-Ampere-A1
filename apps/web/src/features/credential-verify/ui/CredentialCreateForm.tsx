@@ -74,7 +74,7 @@ export function CredentialCreateForm({
     },
   });
 
-  // Region uses a dropdown of major regions + a "직접 입력" fallback for the
+  // Region uses a dropdown of major regions + a "Manual input" fallback for the
   // long tail (or a prefilled value that isn't in the list).
   const region = watch("region") ?? "";
   const regionInList = OCI_REGIONS.some((r) => r.value === region);
@@ -169,7 +169,7 @@ export function CredentialCreateForm({
                 aria-pressed={useRegionManual}
                 onClick={() => setRegionManual((m) => !m)}
               >
-                {useRegionManual ? "목록에서 선택" : "직접 입력"}
+                {useRegionManual ? "Choose from list" : "Manual input"}
               </button>
             </div>
             {useRegionManual ? (
@@ -187,7 +187,7 @@ export function CredentialCreateForm({
                 value={field.value ?? ""}
                 onChange={(e) => field.onChange(e.target.value)}
               >
-                <option value="">Region 선택…</option>
+                <option value="">Select region…</option>
                 {OCI_REGIONS.map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
@@ -206,14 +206,14 @@ export function CredentialCreateForm({
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="passphrase">
-          {isEdit ? "Passphrase (변경 시에만 입력)" : "Passphrase (optional)"}
+          {isEdit ? "Passphrase (enter only to change)" : "Passphrase (optional)"}
         </Label>
         <Input id="passphrase" type="password" {...register("passphrase")} />
       </div>
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="private_key">
-          {isEdit ? "Private key (변경 시에만 재업로드)" : "Private key (PEM)"}
+          {isEdit ? "Private key (re-upload only to change)" : "Private key (PEM)"}
         </Label>
         <Controller
           control={control}

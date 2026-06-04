@@ -72,7 +72,7 @@ describe("AttemptCardList", () => {
       />,
     );
     expect(screen.getByText("prod-a1 (#9)")).toBeInTheDocument();
-    expect(screen.getByText("계정 main-account")).toBeInTheDocument();
+    expect(screen.getByText("Account main-account")).toBeInTheDocument();
   });
 
   it("falls back to #id when the config name is missing", () => {

@@ -17,7 +17,7 @@ const TEXTAREA_CLASS =
   "min-h-28 w-full rounded border border-gray-300 bg-white px-3 py-2 font-mono text-base sm:text-sm";
 
 /**
- * Collapsible "구성 파일 붙여넣기" area (Task C). The user pastes the ini
+ * Collapsible "Paste OCI config" area (Task C). The user pastes the ini
  * block Oracle's console shows; on apply (or paste) we parse it and prefill the
  * credential form's OCID / fingerprint / region fields. The key_file line is
  * ignored with a hint that the PEM is uploaded below.
@@ -31,14 +31,14 @@ export function OciConfigPaste({ onParsed }: OciConfigPasteProps) {
     (value: string) => {
       const { fields, matchedKeys, keyFileIgnored } = parseOciConfig(value);
       if (matchedKeys.length === 0) {
-        setStatus("인식된 항목이 없습니다. ini 형식을 확인하세요.");
+        setStatus("No recognized fields. Check the ini format.");
         return;
       }
       onParsed(fields);
       const keyNote = keyFileIgnored
-        ? " key_file 은 무시했습니다 — 키 파일은 아래에서 업로드하세요."
+        ? " key_file was ignored — upload the key file below."
         : "";
-      setStatus(`${matchedKeys.length}개 항목을 채웠습니다.${keyNote}`);
+      setStatus(`Filled ${matchedKeys.length} field(s).${keyNote}`);
     },
     [onParsed],
   );
@@ -53,7 +53,7 @@ export function OciConfigPaste({ onParsed }: OciConfigPasteProps) {
       >
         <span className="flex items-center gap-1.5">
           <ClipboardPaste aria-hidden className="h-4 w-4 text-gray-400" />
-          구성 파일 붙여넣기
+          Paste OCI config
         </span>
         <span aria-hidden className="text-gray-500">
           {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -84,10 +84,10 @@ export function OciConfigPaste({ onParsed }: OciConfigPasteProps) {
           />
           <div className="flex items-center gap-2">
             <Button type="button" onClick={() => apply(text)}>
-              자동 채우기
+              Auto-fill
             </Button>
             <span className="text-xs text-gray-500">
-              키 파일은 아래에서 업로드하세요.
+              Upload the key file below.
             </span>
           </div>
           {status && (

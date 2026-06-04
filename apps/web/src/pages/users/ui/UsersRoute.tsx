@@ -10,9 +10,9 @@ import { UsersPage } from "./UsersPage";
 function AccessDenied() {
   return (
     <main className="mx-auto flex max-w-md flex-col items-center gap-3 p-8 text-center">
-      <h1 className="text-lg font-semibold">접근 권한이 없습니다</h1>
+      <h1 className="text-lg font-semibold">You don&apos;t have permission to view this page</h1>
       <p data-testid="users-access-denied" className="text-sm text-gray-600">
-        유저 관리는 관리자만 이용할 수 있습니다.
+        User management is available to administrators only.
       </p>
     </main>
   );
@@ -30,7 +30,7 @@ export function UsersRoute() {
   if (isLoading) {
     return (
       <main className="p-6">
-        <p className="text-sm text-gray-500">불러오는 중…</p>
+        <p className="text-sm text-gray-500">Loading…</p>
       </main>
     );
   }

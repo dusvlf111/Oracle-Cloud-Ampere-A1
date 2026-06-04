@@ -12,9 +12,9 @@ const REGISTER = "http://localhost:3000/api/auth/register";
 
 async function fillAndSubmit(label: RegExp) {
   const user = userEvent.setup();
-  await user.type(screen.getByLabelText("사용자명"), "alice");
-  await user.type(screen.getByLabelText("비밀번호"), "password123");
-  await user.type(screen.getByLabelText("비밀번호 확인"), "password123");
+  await user.type(screen.getByLabelText("Username"), "alice");
+  await user.type(screen.getByLabelText("Password"), "password123");
+  await user.type(screen.getByLabelText("Confirm password"), "password123");
   await user.click(screen.getByRole("button", { name: label }));
 }
 
@@ -34,10 +34,10 @@ describe("RegisterForm", () => {
       <RegisterForm mode="setup" onAutoLogin={onAutoLogin} onPending={onPending} />,
     );
     expect(
-      screen.getByRole("button", { name: /관리자 계정 생성/ }),
+      screen.getByRole("button", { name: /Create admin account/ }),
     ).toBeInTheDocument();
 
-    await fillAndSubmit(/관리자 계정 생성/);
+    await fillAndSubmit(/Create admin account/);
 
     await waitFor(() => expect(onAutoLogin).toHaveBeenCalledTimes(1));
     expect(onPending).not.toHaveBeenCalled();
@@ -57,9 +57,9 @@ describe("RegisterForm", () => {
     render(
       <RegisterForm mode="signup" onAutoLogin={onAutoLogin} onPending={onPending} />,
     );
-    expect(screen.getByRole("button", { name: /가입 신청/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Sign up/ })).toBeInTheDocument();
 
-    await fillAndSubmit(/가입 신청/);
+    await fillAndSubmit(/Sign up/);
 
     await waitFor(() => expect(onPending).toHaveBeenCalledTimes(1));
     expect(onPending.mock.calls[0][0]).toMatchObject({ username: "alice" });
@@ -75,23 +75,23 @@ describe("RegisterForm", () => {
       ),
     );
     render(<RegisterForm mode="signup" />);
-    await fillAndSubmit(/가입 신청/);
+    await fillAndSubmit(/Sign up/);
 
     expect(
-      await screen.findByText(/이미 사용 중인 사용자명입니다/),
+      await screen.findByText(/That username is already taken/),
     ).toBeInTheDocument();
   });
 
   it("validates password confirmation locally", async () => {
     const user = userEvent.setup();
     render(<RegisterForm mode="signup" />);
-    await user.type(screen.getByLabelText("사용자명"), "alice");
-    await user.type(screen.getByLabelText("비밀번호"), "password123");
-    await user.type(screen.getByLabelText("비밀번호 확인"), "different");
-    await user.click(screen.getByRole("button", { name: /가입 신청/ }));
+    await user.type(screen.getByLabelText("Username"), "alice");
+    await user.type(screen.getByLabelText("Password"), "password123");
+    await user.type(screen.getByLabelText("Confirm password"), "different");
+    await user.click(screen.getByRole("button", { name: /Sign up/ }));
 
     expect(
-      await screen.findByText(/비밀번호가 일치하지 않습니다/),
+      await screen.findByText(/Passwords do not match/),
     ).toBeInTheDocument();
   });
 });

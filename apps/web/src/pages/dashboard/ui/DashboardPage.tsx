@@ -84,7 +84,7 @@ export function DashboardPage() {
         >
           <h2 className="flex items-center gap-1.5 text-sm font-semibold text-green-800">
             <CheckCircle2 aria-hidden className="h-4 w-4" />
-            최근 생성된 인스턴스
+            Latest instance
           </h2>
           <dl className="mt-2 grid grid-cols-1 gap-1 text-sm text-green-900 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -99,7 +99,7 @@ export function DashboardPage() {
               </dd>
             </div>
             <div>
-              <dt className="inline text-green-700">생성 시각: </dt>
+              <dt className="inline text-green-700">Created at: </dt>
               <dd className="inline">
                 {latestSuccess.attempted_at
                   ? new Date(latestSuccess.attempted_at).toLocaleString()
@@ -111,7 +111,7 @@ export function DashboardPage() {
       )}
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-gray-700">최근 시도 이력</h2>
+        <h2 className="mb-2 text-sm font-semibold text-gray-700">Recent attempts</h2>
         <AttemptsTable />
       </section>
     </div>

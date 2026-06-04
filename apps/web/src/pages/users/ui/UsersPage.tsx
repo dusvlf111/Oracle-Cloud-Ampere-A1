@@ -33,16 +33,16 @@ export function UsersPage() {
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 p-4">
-      <h1 className="text-lg font-semibold">유저 관리</h1>
+      <h1 className="text-lg font-semibold">Users</h1>
 
-      {isLoading && <p className="text-sm text-gray-500">불러오는 중…</p>}
+      {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
       {isError && (
         <p role="alert" className="text-sm text-red-600">
-          유저 목록을 불러오지 못했습니다.
+          Failed to load the user list.
         </p>
       )}
       {!isLoading && !isError && users.length === 0 && (
-        <p className="text-sm text-gray-500">유저가 없습니다.</p>
+        <p className="text-sm text-gray-500">No users.</p>
       )}
 
       {users.length > 0 && (
@@ -54,11 +54,11 @@ export function UsersPage() {
           >
             <thead>
               <tr className="border-b border-gray-200 text-gray-500">
-                <th className="py-2 pr-3 font-medium">사용자명</th>
-                <th className="py-2 pr-3 font-medium">권한</th>
-                <th className="py-2 pr-3 font-medium">상태</th>
-                <th className="py-2 pr-3 font-medium">가입일</th>
-                <th className="py-2 font-medium">작업</th>
+                <th className="py-2 pr-3 font-medium">Username</th>
+                <th className="py-2 pr-3 font-medium">Role</th>
+                <th className="py-2 pr-3 font-medium">Status</th>
+                <th className="py-2 pr-3 font-medium">Joined</th>
+                <th className="py-2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -100,7 +100,7 @@ export function UsersPage() {
                   <StatusBadge status={u.status} />
                 </div>
                 <p className="text-xs text-gray-500">
-                  가입 {formatRelativeTime(u.created_at)}
+                  Joined {formatRelativeTime(u.created_at)}
                 </p>
                 <UserActions user={u} />
               </li>

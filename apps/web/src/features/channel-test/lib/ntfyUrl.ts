@@ -2,9 +2,10 @@
  * ntfy URL helpers — split a single "ntfy URL" into the API's
  * `{ server_url, topic }` pair and join them back for the edit prefill.
  *
- * ntfy 알림은 결국 `<server>/<topic>` 으로의 POST 한 번이다 (PRD §7.5.2 / ntfy
- * docs). UX 를 위해 사용자에겐 URL 한 줄만 받고, 마지막 path segment 를 topic,
- * 나머지를 server_url 로 분해한다. self-host 와 깊은 base path 도 지원한다.
+ * An ntfy notification is ultimately a single POST to `<server>/<topic>` (PRD
+ * §7.5.2 / ntfy docs). For UX we accept a single URL line from the user and
+ * split it: the last path segment is the topic, the rest is the server_url.
+ * Self-hosting and deep base paths are supported.
  *
  *   https://ntfy.sh/my-topic            → { server_url: "https://ntfy.sh", topic: "my-topic" }
  *   https://ntfy.example.com/base/topic → { server_url: "https://ntfy.example.com/base", topic: "topic" }
@@ -23,8 +24,8 @@ export class NtfyUrlError extends Error {
 }
 
 const MISSING_TOPIC =
-  "토픽이 없습니다 — 예: https://ntfy.sh/my-topic";
-const INVALID_URL = "올바른 URL 이 아닙니다 — 예: https://ntfy.sh/my-topic";
+  "Missing topic — e.g. https://ntfy.sh/my-topic";
+const INVALID_URL = "Invalid URL — e.g. https://ntfy.sh/my-topic";
 
 /**
  * Parse a single ntfy URL into `{ server_url, topic }`.

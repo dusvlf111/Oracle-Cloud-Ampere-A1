@@ -25,9 +25,9 @@ describe("LoginPage", () => {
     render(<LoginPage />);
 
     expect(
-      await screen.findByRole("button", { name: /관리자 계정 생성/ }),
+      await screen.findByRole("button", { name: /Create admin account/ }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("비밀번호 확인")).toBeInTheDocument();
+    expect(screen.getByLabelText("Confirm password")).toBeInTheDocument();
   });
 
   it("first signup auto-logs-in and redirects home", async () => {
@@ -43,11 +43,11 @@ describe("LoginPage", () => {
     const user = userEvent.setup();
     render(<LoginPage />);
 
-    await screen.findByRole("button", { name: /관리자 계정 생성/ });
-    await user.type(screen.getByLabelText("사용자명"), "root");
-    await user.type(screen.getByLabelText("비밀번호"), "password123");
-    await user.type(screen.getByLabelText("비밀번호 확인"), "password123");
-    await user.click(screen.getByRole("button", { name: /관리자 계정 생성/ }));
+    await screen.findByRole("button", { name: /Create admin account/ });
+    await user.type(screen.getByLabelText("Username"), "root");
+    await user.type(screen.getByLabelText("Password"), "password123");
+    await user.type(screen.getByLabelText("Confirm password"), "password123");
+    await user.click(screen.getByRole("button", { name: /Create admin account/ }));
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/"));
   });
@@ -59,7 +59,7 @@ describe("LoginPage", () => {
     expect(
       await screen.findByRole("button", { name: /sign in/i }),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText("비밀번호 확인")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Confirm password")).not.toBeInTheDocument();
   });
 
   it("subsequent signup shows the pending notice", async () => {
@@ -77,15 +77,15 @@ describe("LoginPage", () => {
 
     await screen.findByRole("button", { name: /sign in/i });
     // Switch to signup mode via the toggle link.
-    await user.click(screen.getByRole("button", { name: /가입 신청/ }));
-    await user.type(screen.getByLabelText("사용자명"), "alice");
-    await user.type(screen.getByLabelText("비밀번호"), "password123");
-    await user.type(screen.getByLabelText("비밀번호 확인"), "password123");
-    // In signup mode the only "가입 신청" button is the form submit.
-    await user.click(screen.getByRole("button", { name: /가입 신청/ }));
+    await user.click(screen.getByRole("button", { name: /Sign up/ }));
+    await user.type(screen.getByLabelText("Username"), "alice");
+    await user.type(screen.getByLabelText("Password"), "password123");
+    await user.type(screen.getByLabelText("Confirm password"), "password123");
+    // In signup mode the only "Sign up" button is the form submit.
+    await user.click(screen.getByRole("button", { name: /Sign up/ }));
 
     expect(await screen.findByTestId("pending-notice")).toBeInTheDocument();
-    expect(screen.getByText(/승인 대기 중입니다/)).toBeInTheDocument();
+    expect(screen.getByText(/Your account is pending approval/)).toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
   });
 });
