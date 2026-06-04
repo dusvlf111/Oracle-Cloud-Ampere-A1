@@ -102,4 +102,42 @@ describe("AttemptsTable", () => {
       expect(last.status).toBe("rate_limited");
     });
   });
+
+  it("keeps previous rows visible while a status filter refetch is in flight (no freeze)", async () => {
+    // Regression for the mobile dropdown freeze: changing the filter swaps the
+    // query key, so `data` used to become undefined and `data ?? []` minted a
+    // new array every render — useReactTable re-initialized in a loop and the
+    // page locked up. Stable NO_ROWS + keepPreviousData keep the table calm.
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    server.use(
+      http.get(API, async ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get("status") === "success") {
+          await gate; // hold the filtered response open
+          return HttpResponse.json([attempt({ id: 9, status: "success" })]);
+        }
+        return HttpResponse.json([
+          attempt({ id: 1, status: "out_of_capacity" }),
+          attempt({ id: 2, status: "rate_limited" }),
+        ]);
+      }),
+    );
+    const user = userEvent.setup();
+    renderTable();
+    await waitFor(() => expect(screen.getAllByTestId("attempt-row")).toHaveLength(2));
+
+    await user.selectOptions(screen.getByLabelText("Filter by status"), "success");
+
+    // While the filtered request is pending the previous rows must remain.
+    expect(screen.getAllByTestId("attempt-row")).toHaveLength(2);
+
+    release?.();
+    await waitFor(() => expect(screen.getAllByTestId("attempt-row")).toHaveLength(1));
+    expect(
+      within(screen.getAllByTestId("attempt-row")[0]).getByTestId("attempt-status-badge"),
+    ).toHaveTextContent("success");
+  });
 });
