@@ -32,7 +32,7 @@ async def _create_credential(client: AsyncClient, name: str = "main") -> int:
         "name": name,
         "tenancy_ocid": "ocid1.tenancy.oc1..aaaaaaaatenancy",
         "user_ocid": "ocid1.user.oc1..aaaaaaaauser",
-        "fingerprint": "ab:cd:ef:12:34:56",
+        "fingerprint": "ab:cd:ef:12:34:56:78:90:ab:cd:ef:12:34:56:78:90",
         "region": "ap-chuncheon-1",
     }
     files = {
@@ -241,5 +241,24 @@ async def test_subnets_generic_oci_error(
         oci_exceptions.ServiceError(500, "InternalError", {}, "boom")
     )
     resp = await authed_db_client.get(f"/api/meta/subnets?credential_id={cid}")
+    assert resp.status_code == 502
+    assert resp.json()["error"]["code"] == "oci_request_failed"
+
+
+async def test_meta_unexpected_exception_converges_to_502(
+    authed_db_client: AsyncClient, cred_settings, oci_meta_mock
+) -> None:
+    """A non-OCI exception must converge to 502 oci_request_failed, never 500.
+
+    Regression for the prod ERROR `Unhandled exception` on /api/meta/*
+    (hardening §3).
+    """
+    cid = await _create_credential(authed_db_client)
+    oci_meta_mock["identity"].return_value.list_availability_domains.side_effect = (
+        RuntimeError("unexpected boom")
+    )
+    resp = await authed_db_client.get(
+        f"/api/meta/availability-domains?credential_id={cid}"
+    )
     assert resp.status_code == 502
     assert resp.json()["error"]["code"] == "oci_request_failed"

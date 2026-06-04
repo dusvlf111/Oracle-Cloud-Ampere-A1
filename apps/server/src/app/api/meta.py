@@ -76,6 +76,8 @@ async def list_availability_domains(
 ) -> list[str]:
     cred = _get_or_404(session, credential_id)
     try:
+        # _passphrase/_cred_dict inside the try so a decrypt failure also
+        # converges to 502 instead of leaking a 500 (hardening §3).
         return await oci_client.fetch_availability_domains(
             _cred_dict(cred), passphrase=_passphrase(cred)
         )

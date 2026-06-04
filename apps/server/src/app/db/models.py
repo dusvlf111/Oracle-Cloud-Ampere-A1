@@ -86,7 +86,8 @@ class Attempt(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     config_id: int = Field(foreign_key="instanceconfig.id", index=True)
     attempted_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    # "success" | "out_of_capacity" | "rate_limited" | "auth_error" | "other_error"
+    # "success" | "out_of_capacity" | "rate_limited" | "auth_error"
+    #          | "config_error" | "other_error"
     status: str
     message: str | None = None
     instance_ocid: str | None = None

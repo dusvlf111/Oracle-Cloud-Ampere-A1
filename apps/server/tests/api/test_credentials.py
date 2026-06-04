@@ -27,13 +27,16 @@ def cred_settings(tmp_path, monkeypatch: pytest.MonkeyPatch) -> Settings:
     return settings
 
 
+_FINGERPRINT = "ab:cd:ef:12:34:56:78:90:ab:cd:ef:12:34:56:78:90"
+
+
 async def _create(client: AsyncClient, **overrides):
     data = {
         "name": overrides.get("name", "main"),
-        "tenancy_ocid": "ocid1.tenancy.oc1..aaaaaaaatenancy",
-        "user_ocid": "ocid1.user.oc1..aaaaaaaauser",
-        "fingerprint": "ab:cd:ef:12:34:56",
-        "region": "ap-chuncheon-1",
+        "tenancy_ocid": overrides.get("tenancy_ocid", "ocid1.tenancy.oc1..aaaaaaaatenancy"),
+        "user_ocid": overrides.get("user_ocid", "ocid1.user.oc1..aaaaaaaauser"),
+        "fingerprint": overrides.get("fingerprint", _FINGERPRINT),
+        "region": overrides.get("region", "ap-chuncheon-1"),
     }
     if "passphrase" in overrides:
         data["passphrase"] = overrides["passphrase"]
@@ -58,7 +61,7 @@ async def test_create_writes_key_file_0600_and_masks(
     # Masked fields — no full secret leaks.
     assert body["tenancy_ocid"].endswith("***")
     assert "tenancy" not in body["tenancy_ocid"] or body["tenancy_ocid"] != "ocid1.tenancy.oc1..aaaaaaaatenancy"
-    assert body["fingerprint"] == "ab:cd:**:**:**:**"
+    assert body["fingerprint"].startswith("ab:cd:**")
 
     key_path = cred_settings.keys_dir + f"/{body['id']}.pem"
     assert os.path.exists(key_path)
@@ -111,6 +114,24 @@ async def test_verify_failure(
     assert "NotAuthenticated" in body["error"]
 
 
+async def test_verify_unexpected_exception_converges_to_ok_false(
+    authed_db_client: AsyncClient, cred_settings, oci_mock
+) -> None:
+    """An unexpected (non-OCI) exception must collapse to {ok: false}, not 500.
+
+    Regression for the prod ERROR `Unhandled exception` on verify (hardening §3).
+    """
+    oci_mock.return_value.list_availability_domains.side_effect = RuntimeError(
+        "totally unexpected"
+    )
+    created = (await _create(authed_db_client)).json()
+    resp = await authed_db_client.post(f"/api/credentials/{created['id']}/verify")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is False
+    assert body["error"]
+
+
 async def test_verify_not_found(
     authed_db_client: AsyncClient, cred_settings
 ) -> None:
@@ -143,3 +164,46 @@ async def test_delete_not_found(
     resp = await authed_db_client.request("DELETE", "/api/credentials/12345")
     assert resp.status_code == 404
     assert resp.json()["error"]["code"] == "credential_not_found"
+
+
+# --- input validation + normalisation (hardening §1) -----------------------
+
+
+async def test_create_strips_whitespace_and_newlines(
+    authed_db_client: AsyncClient, cred_settings
+) -> None:
+    """Pasted values with stray whitespace/newlines are normalised, not rejected."""
+    resp = await _create(
+        authed_db_client,
+        tenancy_ocid="  ocid1.tenancy.oc1..aaaaaaaatenancy\n",
+        user_ocid="ocid1.user.oc1..aaaaaaaauser\r\n",
+        fingerprint=f"  {_FINGERPRINT}  ",
+        region=" ap-chuncheon-1 ",
+    )
+    assert resp.status_code == 201, resp.text
+
+    # The stored value is the stripped form (masked echo still ends with ***).
+    body = resp.json()
+    assert body["region"] == "ap-chuncheon-1"
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "needle"),
+    [
+        ("tenancy_ocid", "ocid1.user.oc1..wrong", "tenancy_ocid"),
+        ("user_ocid", "ocid1.tenancy.oc1..wrong", "user_ocid"),
+        ("fingerprint", "ab:cd:ef", "fingerprint"),
+        ("fingerprint", "ZZ:cd:ef:12:34:56:78:90:ab:cd:ef:12:34:56:78:90", "fingerprint"),
+        ("region", "AP_Chuncheon", "region"),
+    ],
+)
+async def test_create_rejects_malformed_fields(
+    authed_db_client: AsyncClient, cred_settings, field: str, value: str, needle: str
+) -> None:
+    resp = await _create(authed_db_client, **{field: value})
+    assert resp.status_code == 422, resp.text
+    body = resp.json()
+    assert body["error"]["code"] == "validation_error"
+    # The offending field name appears in the per-field error details.
+    blob = str(body["error"]["details"])
+    assert needle in blob

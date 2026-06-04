@@ -50,15 +50,36 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     )
 
 
+def _jsonable_errors(errors: list[dict]) -> list[dict]:
+    """Make pydantic/validation errors JSON-safe.
+
+    Custom ``field_validator``s raise ``ValueError`` which pydantic surfaces in
+    ``ctx['error']`` as the *exception object* — not JSON serialisable. We keep
+    the per-field ``loc``/``msg``/``type`` and stringify any stray ctx values so
+    the 422 envelope never itself 500s (hardening §1).
+    """
+    cleaned: list[dict] = []
+    for err in errors:
+        item = {
+            "loc": list(err.get("loc", [])),
+            "msg": err.get("msg", ""),
+            "type": err.get("type", ""),
+        }
+        ctx = err.get("ctx")
+        if ctx:
+            item["ctx"] = {k: str(v) for k, v in ctx.items()}
+        cleaned.append(item)
+    return cleaned
+
+
 async def validation_error_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    # `errors()` is JSON-serialisable list of {loc, msg, type, ...}.
     return _envelope(
         status_code=422,
         code="validation_error",
         message="Request validation failed",
-        details={"errors": exc.errors()},
+        details={"errors": _jsonable_errors(exc.errors())},
         request_id=get_request_id(request),
     )
 

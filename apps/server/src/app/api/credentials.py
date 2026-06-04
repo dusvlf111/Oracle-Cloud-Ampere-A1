@@ -17,13 +17,15 @@ import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, Response, UploadFile
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 from sqlmodel import Session, select
 
 from app.api.deps import AppError, require_login
 from app.config import get_settings
 from app.db.models import OciCredential
 from app.db.session import get_session
-from app.schemas.credential import CredentialRead, VerifyResponse
+from app.schemas.credential import CredentialCreate, CredentialRead, VerifyResponse
 from app.services import oci_client
 from app.services.crypto import decrypt, encrypt
 
@@ -69,13 +71,29 @@ async def create_credential(
     _user: str = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> CredentialRead:
+    # Validate + normalise the multipart Form fields. The credentials route is
+    # multipart (PEM upload) so it does not go through a Pydantic body; we run
+    # the same rules manually and re-raise as RequestValidationError so the
+    # global handler emits the 422 ``validation_error`` envelope with per-field
+    # details (hardening §1).
+    try:
+        payload = CredentialCreate(
+            name=name,
+            tenancy_ocid=tenancy_ocid,
+            user_ocid=user_ocid,
+            fingerprint=fingerprint,
+            region=region,
+        )
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc
+
     # Persist first to obtain the id used in the key file name.
     cred = OciCredential(
-        name=name,
-        tenancy_ocid=tenancy_ocid,
-        user_ocid=user_ocid,
-        fingerprint=fingerprint,
-        region=region,
+        name=payload.name,
+        tenancy_ocid=payload.tenancy_ocid,
+        user_ocid=payload.user_ocid,
+        fingerprint=payload.fingerprint,
+        region=payload.region,
         private_key_path="",  # set after we know the id
         passphrase_enc=encrypt((passphrase or "").encode()) if passphrase else None,
     )
@@ -112,19 +130,31 @@ async def verify_credential(
     session: Session = Depends(get_session),
 ) -> VerifyResponse:
     cred = _get_or_404(session, credential_id)
-    passphrase = decrypt(cred.passphrase_enc).decode() if cred.passphrase_enc else None
-    result = await oci_client.verify(
-        {
-            "id": cred.id,
-            "tenancy_ocid": cred.tenancy_ocid,
-            "user_ocid": cred.user_ocid,
-            "fingerprint": cred.fingerprint,
-            "region": cred.region,
-            "private_key_path": cred.private_key_path,
-        },
-        passphrase=passphrase,
-    )
-    return VerifyResponse(ok=result.ok, error=result.error)
+    # verify must NEVER 500: any unexpected error (decrypt failure, malformed
+    # config, OCI exception) collapses into {ok: false, error} (hardening §3).
+    try:
+        passphrase = (
+            decrypt(cred.passphrase_enc).decode() if cred.passphrase_enc else None
+        )
+        result = await oci_client.verify(
+            {
+                "id": cred.id,
+                "tenancy_ocid": cred.tenancy_ocid,
+                "user_ocid": cred.user_ocid,
+                "fingerprint": cred.fingerprint,
+                "region": cred.region,
+                "private_key_path": cred.private_key_path,
+            },
+            passphrase=passphrase,
+        )
+        return VerifyResponse(ok=result.ok, error=result.error)
+    except Exception as exc:  # noqa: BLE001 — verify never raises to the client
+        logger.warning(
+            "Credential verify hit an unexpected error: %s",
+            exc,
+            extra={"credential_id": credential_id},
+        )
+        return VerifyResponse(ok=False, error=str(exc))
 
 
 @router.delete("/{credential_id}", status_code=204)

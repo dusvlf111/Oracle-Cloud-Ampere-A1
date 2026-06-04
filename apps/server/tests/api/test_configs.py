@@ -150,6 +150,71 @@ async def test_create_invalid_field_422(
     assert resp.json()["error"]["code"] == "validation_error"
 
 
+# --- input validation + normalisation (hardening §1) -----------------------
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("image_ocid", "ocid1.subnet.oc1..wrong"),
+        ("subnet_ocid", "ocid1.image.oc1..wrong"),
+        ("availability_domain", "   "),
+        ("ssh_public_key", "not-a-key"),
+        ("ocpus", 5),  # A1 Free Tier cap is 4
+        ("memory_gb", 25),  # A1 Free Tier cap is 24
+    ],
+)
+async def test_create_rejects_malformed(
+    authed_db_client: AsyncClient, seed, field: str, value
+) -> None:
+    resp = await authed_db_client.post(
+        "/api/configs", json=_payload(seed["credential_id"], **{field: value})
+    )
+    assert resp.status_code == 422, resp.text
+    body = resp.json()
+    assert body["error"]["code"] == "validation_error"
+    assert field in str(body["error"]["details"])
+
+
+async def test_create_normalises_whitespace_and_multiline_ssh(
+    authed_db_client: AsyncClient, seed
+) -> None:
+    """Whitespace is stripped and a wrapped SSH key is joined to one line."""
+    resp = await authed_db_client.post(
+        "/api/configs",
+        json=_payload(
+            seed["credential_id"],
+            image_ocid="  ocid1.image.oc1..img\n",
+            subnet_ocid="ocid1.subnet.oc1..sub\r\n",
+            availability_domain=" Uocm:AP-CHUNCHEON-1-AD-1 ",
+            ssh_public_key="ssh-ed25519 AAAAB3Nza\nC1lZDI1 user@host",
+        ),
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["image_ocid"] == "ocid1.image.oc1..img"
+    assert body["subnet_ocid"] == "ocid1.subnet.oc1..sub"
+    assert body["availability_domain"] == "Uocm:AP-CHUNCHEON-1-AD-1"
+    assert "\n" not in body["ssh_public_key"]
+    assert body["ssh_public_key"].startswith("ssh-ed25519 ")
+
+
+async def test_update_rejects_malformed(
+    authed_db_client: AsyncClient, seed
+) -> None:
+    created = (
+        await authed_db_client.post(
+            "/api/configs", json=_payload(seed["credential_id"])
+        )
+    ).json()
+    resp = await authed_db_client.put(
+        f"/api/configs/{created['id']}",
+        json=_payload(seed["credential_id"], subnet_ocid="ocid1.bogus.oc1..x"),
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "validation_error"
+
+
 async def test_update_not_found(authed_db_client: AsyncClient, seed) -> None:
     resp = await authed_db_client.put(
         "/api/configs/55555", json=_payload(seed["credential_id"])

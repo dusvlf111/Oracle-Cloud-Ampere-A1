@@ -11,6 +11,7 @@ from oci import exceptions as oci_exceptions
 from app.services import oci_client
 from app.services.oci_client import (
     AUTH_ERROR,
+    CONFIG_ERROR,
     OTHER_ERROR,
     OUT_OF_CAPACITY,
     RATE_LIMITED,
@@ -53,9 +54,15 @@ def _svc_error(status: int, code: str, message: str) -> oci_exceptions.ServiceEr
     [
         (_svc_error(500, "InternalError", "Out of host capacity."), OUT_OF_CAPACITY),
         (_svc_error(429, "TooManyRequests", "slow down"), RATE_LIMITED),
+        # 429 stays rate_limited even though it's a 4xx (never config_error).
+        (_svc_error(429, "TooManyRequests", "bad request"), RATE_LIMITED),
         (_svc_error(401, "NotAuthenticated", "bad key"), AUTH_ERROR),
-        (_svc_error(404, "NotAuthorizedOrNotFound", "nope"), AUTH_ERROR),
-        (_svc_error(400, "InvalidParameter", "bad ocid"), AUTH_ERROR),
+        (_svc_error(403, "NotAuthorized", "forbidden"), AUTH_ERROR),
+        # Permanent client errors → config_error (hardening §2).
+        (_svc_error(404, "NotAuthorizedOrNotFound", "nope"), CONFIG_ERROR),
+        (_svc_error(400, "InvalidParameter", "bad ocid"), CONFIG_ERROR),
+        (_svc_error(400, "CannotParseRequest", "malformed"), CONFIG_ERROR),
+        (_svc_error(400, "SomethingElse", "still 400"), CONFIG_ERROR),
         (_svc_error(503, "ServiceUnavailable", "later"), OTHER_ERROR),
         (RuntimeError("boom"), OTHER_ERROR),
     ],

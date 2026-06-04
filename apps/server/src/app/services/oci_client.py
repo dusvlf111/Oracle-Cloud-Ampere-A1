@@ -8,7 +8,15 @@ The ``oci`` SDK is synchronous; every blocking call is wrapped in
 - ``classify_error`` — map an OCI exception to a domain status string
 
 Domain statuses (also used by ``Attempt.status``):
-``auth_error`` | ``out_of_capacity`` | ``rate_limited`` | ``other_error``.
+``auth_error`` | ``config_error`` | ``out_of_capacity`` | ``rate_limited`` |
+``other_error``.
+
+``config_error`` is a *permanent* client-side error (malformed request the
+caller can never make succeed): OCI ``ServiceError`` with status 400/404 such
+as ``CannotParseRequest`` / ``InvalidParameter`` / ``NotAuthorizedOrNotFound``.
+The worker reacts by disabling the config instead of retrying forever
+(hardening §2). 429 is excluded (→ ``rate_limited``); 401/403 stay
+``auth_error``.
 
 All tests mock the SDK — no real OCI calls are ever made.
 """
@@ -28,16 +36,26 @@ logger = logging.getLogger("app.services.oci_client")
 
 # Domain error classes (subset relevant to verification / launch).
 AUTH_ERROR = "auth_error"
+CONFIG_ERROR = "config_error"
 OUT_OF_CAPACITY = "out_of_capacity"
 RATE_LIMITED = "rate_limited"
 OTHER_ERROR = "other_error"
 
+# Authentication / authorisation failures (signature, missing perms) — the
+# credential itself is bad. Status 401/403 also routes here.
 _AUTH_CODES = {
     "NotAuthenticated",
-    "NotAuthorizedOrNotFound",
     "NotAuthorized",
     "SignatureDoesNotMatch",
+}
+
+# Permanent client errors: the *request* is malformed (bad OCID, parse error,
+# resource that the parameters can never resolve to). Retrying is pointless and
+# only burns rate-limit budget — the worker disables the config instead.
+_CONFIG_CODES = {
+    "CannotParseRequest",
     "InvalidParameter",
+    "NotAuthorizedOrNotFound",
 }
 
 
@@ -78,9 +96,13 @@ def classify_error(exc: Exception) -> tuple[str, str]:
         if "out of host capacity" in msg or "out of capacity" in msg:
             return OUT_OF_CAPACITY, exc.message or "out of host capacity"
         if exc.status == 429:
+            # Transient — never a permanent config_error, even on 4xx.
             return RATE_LIMITED, exc.message or "rate limited"
         if exc.code in _AUTH_CODES or exc.status in {401, 403}:
             return AUTH_ERROR, f"{exc.code}: {exc.message}"
+        # Permanent client error: malformed request (400/404, 429 already handled).
+        if exc.code in _CONFIG_CODES or exc.status in {400, 404}:
+            return CONFIG_ERROR, f"{exc.code}: {exc.message}"
         return OTHER_ERROR, f"{exc.code}: {exc.message}"
     return OTHER_ERROR, str(exc)
 

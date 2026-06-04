@@ -9,6 +9,7 @@ describe("AttemptStatusBadge", () => {
     ["out_of_capacity", "out of capacity", "amber"],
     ["rate_limited", "rate limited", "orange"],
     ["auth_error", "auth error", "red"],
+    ["config_error", "config error", "rose"],
     ["other_error", "error", "gray"],
   ])("renders %s with label/colour", (status, label, colour) => {
     render(<AttemptStatusBadge status={status} />);

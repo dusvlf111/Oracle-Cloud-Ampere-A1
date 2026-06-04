@@ -10,6 +10,7 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   },
   rate_limited: { label: "rate limited", className: "bg-orange-100 text-orange-800" },
   auth_error: { label: "auth error", className: "bg-red-100 text-red-800" },
+  config_error: { label: "config error", className: "bg-rose-100 text-rose-800" },
   other_error: { label: "error", className: "bg-gray-200 text-gray-700" },
 };
 
