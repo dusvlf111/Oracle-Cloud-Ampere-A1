@@ -26,6 +26,7 @@ from app.db.models import (
     InstanceConfig,
     NotificationChannel,
     OciCredential,
+    User,
 )
 from app.services.crypto import encrypt_json
 from app.workers import concurrency
@@ -53,6 +54,14 @@ def _service_error(status: int, code: str, message: str) -> oe.ServiceError:
     return oe.ServiceError(status, code, {}, message)
 
 
+def _make_owner(session: Session, username: str = "owner") -> int:
+    u = User(username=username, password_hash="h", role="admin", status="active")
+    session.add(u)
+    session.commit()
+    session.refresh(u)
+    return u.id
+
+
 def _make_credential(session: Session, name: str = "acct") -> OciCredential:
     cred = OciCredential(
         name=name,
@@ -61,6 +70,7 @@ def _make_credential(session: Session, name: str = "acct") -> OciCredential:
         fingerprint="ab:cd:ef",
         region="ap-chuncheon-1",
         private_key_path="/data/keys/x.pem",
+        owner_id=_make_owner(session, f"owner-{name}"),
     )
     session.add(cred)
     session.commit()
@@ -72,6 +82,7 @@ def _make_config(session: Session, cred: OciCredential, **kw) -> InstanceConfig:
     cfg = InstanceConfig(
         name=kw.pop("name", "cfg"),
         credential_id=cred.id,
+        owner_id=kw.pop("owner_id", cred.owner_id),
         image_ocid="ocid1.image..x",
         subnet_ocid="ocid1.subnet..x",
         availability_domain="AD-1",
@@ -228,6 +239,7 @@ async def test_auth_error_disables_and_notifies(engine, app_secret, monkeypatch)
         cred = _make_credential(s)
         cfg = _make_config(s, cred)
         ch = NotificationChannel(
+            owner_id=cfg.owner_id,
             name="ntfy", type="ntfy", config_enc=encrypt_json({"server_url": "https://n", "topic": "t"})
         )
         s.add(ch)
@@ -268,6 +280,7 @@ async def test_config_error_disables_notifies_and_stops(engine, app_secret, monk
         cred = _make_credential(s)
         cfg = _make_config(s, cred)
         ch = NotificationChannel(
+            owner_id=cfg.owner_id,
             name="ntfy",
             type="ntfy",
             config_enc=encrypt_json({"server_url": "https://n", "topic": "t"}),
@@ -352,9 +365,11 @@ async def test_success_notifies_all_channels_one_failure_isolated(engine, app_se
         cred = _make_credential(s)
         cfg = _make_config(s, cred)
         ch1 = NotificationChannel(
+            owner_id=cfg.owner_id,
             name="discord", type="discord", config_enc=encrypt_json({"webhook_url": "https://x"})
         )
         ch2 = NotificationChannel(
+            owner_id=cfg.owner_id,
             name="ntfy",
             type="ntfy",
             config_enc=encrypt_json({"server_url": "https://n", "topic": "t"}),
@@ -404,6 +419,7 @@ async def test_max_attempts_reached_disables_notifies_and_stops(
         cred = _make_credential(s)
         cfg = _make_config(s, cred, max_attempts=2)
         ch = NotificationChannel(
+            owner_id=cfg.owner_id,
             name="ntfy-cap",
             type="ntfy",
             config_enc=encrypt_json({"server_url": "https://n", "topic": "t"}),

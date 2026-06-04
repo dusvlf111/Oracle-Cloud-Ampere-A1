@@ -21,8 +21,8 @@ from sqlalchemy import delete as sa_delete
 from sqlmodel import Session, select
 from sse_starlette.sse import EventSourceResponse
 
-from app.api.deps import AppError, require_login
-from app.db.models import LogEntry
+from app.api.deps import AppError, is_admin, require_login
+from app.db.models import InstanceConfig, LogEntry, User
 from app.db.session import get_session
 from app.log_bus import log_bus
 
@@ -38,6 +38,7 @@ def _record_matches(
     levels: list[str] | None,
     logger: str | None,
     config_id: int | None,
+    allowed_config_ids: set[int] | None = None,
 ) -> bool:
     if levels and rec.get("level") not in levels:
         return False
@@ -45,7 +46,22 @@ def _record_matches(
         return False
     if config_id is not None and rec.get("config_id") != config_id:
         return False
+    # Ownership scope (PRD §6.3): when restricted, only records tied to an owned
+    # config pass. ``None`` here = admin (no restriction). A non-admin never sees
+    # records without a config_id (system-level logs).
+    if allowed_config_ids is not None:
+        rec_cfg = rec.get("config_id")
+        if rec_cfg is None or rec_cfg not in allowed_config_ids:
+            return False
     return True
+
+
+def _owned_config_ids(session: Session, user: User) -> set[int]:
+    """The set of config ids the user owns (used to scope log visibility)."""
+    rows = session.exec(
+        select(InstanceConfig.id).where(InstanceConfig.owner_id == user.id)
+    ).all()
+    return {r for r in rows}
 
 
 class LogPage(BaseModel):
@@ -75,10 +91,16 @@ def list_logs(
     q: str | None = Query(default=None, description="message substring (LIKE)"),
     limit: int = Query(default=50, ge=1, le=MAX_LIMIT),
     cursor: str | None = Query(default=None, description="base64(last_id) — descending"),
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> LogPage:
     stmt = select(LogEntry)
+    # Ownership scope (PRD §6.3): non-admins only see logs of configs they own.
+    if not is_admin(user):
+        owned = _owned_config_ids(session, user)
+        if not owned:
+            return LogPage(items=[], next_cursor=None, has_more=False)
+        stmt = stmt.where(LogEntry.config_id.in_(owned))
     if levels:
         stmt = stmt.where(LogEntry.level.in_([lvl.upper() for lvl in levels]))
     if logger:
@@ -112,6 +134,7 @@ async def sse_event_stream(
     levels: list[str] | None,
     logger: str | None,
     config_id: int | None,
+    allowed_config_ids: set[int] | None = None,
     heartbeat: float = HEARTBEAT_SEC,
 ) -> AsyncIterator[dict]:
     """Yield SSE ``log`` / ``ping`` events off the :data:`log_bus`.
@@ -131,7 +154,11 @@ async def sse_event_stream(
                 yield {"event": "ping", "data": "{}"}
                 continue
             if _record_matches(
-                rec, levels=norm_levels, logger=logger, config_id=config_id
+                rec,
+                levels=norm_levels,
+                logger=logger,
+                config_id=config_id,
+                allowed_config_ids=allowed_config_ids,
             ):
                 yield {"event": "log", "data": json.dumps(rec, default=str)}
 
@@ -142,32 +169,41 @@ async def stream_logs(
     levels: list[str] | None = Query(default=None),
     logger: str | None = Query(default=None),
     config_id: int | None = Query(default=None),
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
+    session: Session = Depends(get_session),
 ) -> EventSourceResponse:
     """Live log stream over SSE (PRD §8, §9.3.7).
 
     Subscribes to the in-memory :data:`log_bus`, applies the same filter
-    semantics as the query endpoint, and emits a ``ping`` heartbeat every
-    15 seconds so idle proxies don't drop the connection.
+    semantics as the query endpoint (incl. ownership scope), and emits a
+    ``ping`` heartbeat every 15 seconds so idle proxies don't drop the
+    connection.
     """
+    allowed = None if is_admin(user) else _owned_config_ids(session, user)
     return EventSourceResponse(
         sse_event_stream(
             is_disconnected=request.is_disconnected,
             levels=levels,
             logger=logger,
             config_id=config_id,
+            allowed_config_ids=allowed,
         )
     )
-
-    return EventSourceResponse(event_gen())
 
 
 @router.delete("", status_code=204)
 def delete_logs(
     before: datetime = Query(..., description="delete records with timestamp < before"),
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> Response:
-    session.exec(sa_delete(LogEntry).where(LogEntry.timestamp < before))
+    stmt = sa_delete(LogEntry).where(LogEntry.timestamp < before)
+    # Ownership scope: non-admins can only prune logs of configs they own.
+    if not is_admin(user):
+        owned = _owned_config_ids(session, user)
+        stmt = stmt.where(LogEntry.config_id.in_(owned)) if owned else stmt.where(
+            LogEntry.id < 0  # match nothing
+        )
+    session.exec(stmt)
     session.commit()
     return Response(status_code=204)
