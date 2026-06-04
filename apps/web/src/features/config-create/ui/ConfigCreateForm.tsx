@@ -5,33 +5,82 @@ import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { useChannels } from "@/entities/channel";
-import { createConfig, type Config } from "@/entities/config";
+import {
+  createConfig,
+  updateConfig,
+  type Config,
+} from "@/entities/config";
 import { useCredentials } from "@/entities/credential";
 import { useAvailabilityDomains, useImages, useSubnets } from "@/entities/meta";
 import { Button, Input, Label, isApiError } from "@/shared";
 
+import {
+  BOOT_VOLUME_OPTIONS,
+  MAX_ATTEMPTS_OPTIONS,
+  MEMORY_OPTIONS,
+  OCPU_OPTIONS,
+  RETRY_INTERVAL_OPTIONS,
+  SHAPE_OPTIONS,
+} from "../model/options";
 import { configCreateSchema, type ConfigCreateValues } from "../model/schema";
 import { MetaSelectField, type MetaOption } from "./MetaSelectField";
+import { SelectField } from "./SelectField";
 
 export interface ConfigCreateFormProps {
+  /** create (default) submits POST; edit submits PUT to the existing id. */
+  mode?: "create" | "edit";
+  /** Existing config to prefill in edit mode. */
+  initial?: Config;
   onCreated?: (config: Config) => void;
+  /** Called after a successful create OR edit. */
+  onSaved?: (config: Config) => void;
 }
 
 const TEXT_FIELDS: Array<{ name: keyof ConfigCreateValues; label: string }> = [
   { name: "name", label: "Name" },
-  { name: "shape", label: "Shape" },
   { name: "ssh_public_key", label: "SSH public key" },
 ];
 
-const NUMBER_FIELDS: Array<{ name: keyof ConfigCreateValues; label: string }> = [
-  { name: "ocpus", label: "OCPUs" },
-  { name: "memory_gb", label: "Memory (GB)" },
-  { name: "boot_volume_gb", label: "Boot volume (GB)" },
-  { name: "retry_interval_sec", label: "Retry interval (s)" },
-  { name: "max_attempts", label: "Max attempts (optional)" },
-];
+/** Build form defaults from an existing config (edit) or static (create). */
+function toDefaults(initial?: Config): Partial<ConfigCreateValues> {
+  if (!initial) {
+    return {
+      name: "",
+      shape: "VM.Standard.A1.Flex",
+      ocpus: 4,
+      memory_gb: 24,
+      boot_volume_gb: 50,
+      image_ocid: "",
+      subnet_ocid: "",
+      availability_domain: "",
+      ssh_public_key: "",
+      retry_interval_sec: 60,
+      channel_ids: [],
+    };
+  }
+  return {
+    name: initial.name,
+    credential_id: initial.credential_id,
+    shape: initial.shape,
+    ocpus: initial.ocpus,
+    memory_gb: initial.memory_gb,
+    boot_volume_gb: initial.boot_volume_gb,
+    image_ocid: initial.image_ocid,
+    subnet_ocid: initial.subnet_ocid,
+    availability_domain: initial.availability_domain,
+    ssh_public_key: initial.ssh_public_key,
+    retry_interval_sec: initial.retry_interval_sec,
+    max_attempts: initial.max_attempts ?? undefined,
+    channel_ids: initial.channel_ids ?? [],
+  };
+}
 
-export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
+export function ConfigCreateForm({
+  mode = "create",
+  initial,
+  onCreated,
+  onSaved,
+}: ConfigCreateFormProps) {
   const { data: credentials = [] } = useCredentials();
   const { data: channels = [] } = useChannels();
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -45,19 +94,7 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<ConfigCreateValues>({
     resolver: zodResolver(configCreateSchema),
-    defaultValues: {
-      name: "",
-      shape: "VM.Standard.A1.Flex",
-      ocpus: 4,
-      memory_gb: 24,
-      boot_volume_gb: 50,
-      image_ocid: "",
-      subnet_ocid: "",
-      availability_domain: "",
-      ssh_public_key: "",
-      retry_interval_sec: 60,
-      channel_ids: [],
-    },
+    defaultValues: toDefaults(initial),
   });
 
   // Coerce the selected credential to a number; meta lookups stay disabled
@@ -68,6 +105,7 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
       ? undefined
       : Number(rawCredentialId);
   const shape = watch("shape") || "VM.Standard.A1.Flex";
+  const ocpus = Number(watch("ocpus")) || 0;
   const hasCredential = credentialId != null && !Number.isNaN(credentialId);
 
   const enabled = { query: { enabled: hasCredential } } as const;
@@ -101,10 +139,10 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     try {
-      const created = await createConfig({
+      const payload = {
         name: values.name,
         credential_id: Number(values.credential_id),
-        shape: values.shape,
+        shape: values.shape || "VM.Standard.A1.Flex",
         ocpus: Number(values.ocpus),
         memory_gb: Number(values.memory_gb),
         boot_volume_gb: Number(values.boot_volume_gb),
@@ -117,11 +155,20 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
         max_attempts:
           values.max_attempts == null ? undefined : Number(values.max_attempts),
         channel_ids: values.channel_ids ?? [],
-      });
-      reset();
-      onCreated?.(created);
+      };
+      const saved =
+        mode === "edit" && initial
+          ? await updateConfig(initial.id, payload)
+          : await createConfig(payload);
+      if (mode === "create") reset();
+      onCreated?.(saved);
+      onSaved?.(saved);
     } catch (err) {
-      setFormError(isApiError(err) ? err.message : "Failed to create config.");
+      setFormError(
+        isApiError(err)
+          ? err.message
+          : `Failed to ${mode === "edit" ? "update" : "create"} config.`,
+      );
     }
   });
 
@@ -145,7 +192,7 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
           id="credential_id"
           aria-label="Credential"
           {...register("credential_id")}
-          className="rounded border border-gray-300 px-2 py-1 text-sm"
+          className="min-h-11 w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-base sm:min-h-0 sm:appearance-auto sm:px-2 sm:py-1 sm:text-sm"
         >
           <option value="">Select a credential…</option>
           {credentials.map((c) => (
@@ -160,6 +207,74 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
           </p>
         )}
       </div>
+
+      <Controller
+        control={control}
+        name="shape"
+        render={({ field }) => (
+          <SelectField
+            id="shape"
+            label="Shape"
+            value={field.value ?? "VM.Standard.A1.Flex"}
+            onChange={field.onChange}
+            options={SHAPE_OPTIONS}
+            allowManual
+            errorMessage={errors.shape?.message as string}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="ocpus"
+        render={({ field }) => (
+          <SelectField
+            id="ocpus"
+            label="OCPUs"
+            value={String(field.value ?? "")}
+            onChange={(v) => field.onChange(v)}
+            options={OCPU_OPTIONS}
+            hint="Free Tier 한도: 4 OCPU"
+            errorMessage={errors.ocpus?.message as string}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="memory_gb"
+        render={({ field }) => (
+          <SelectField
+            id="memory_gb"
+            label="Memory (GB)"
+            value={String(field.value ?? "")}
+            onChange={(v) => field.onChange(v)}
+            options={MEMORY_OPTIONS}
+            hint={
+              ocpus > 0
+                ? `권장: OCPU×6 = ${ocpus * 6} GB`
+                : "권장: OCPU당 6 GB"
+            }
+            errorMessage={errors.memory_gb?.message as string}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="boot_volume_gb"
+        render={({ field }) => (
+          <SelectField
+            id="boot_volume_gb"
+            label="Boot volume (GB)"
+            value={String(field.value ?? "")}
+            onChange={(v) => field.onChange(v)}
+            options={BOOT_VOLUME_OPTIONS}
+            hint="Free Tier 총 200 GB 한도"
+            errorMessage={errors.boot_volume_gb?.message as string}
+          />
+        )}
+      />
 
       <Controller
         control={control}
@@ -215,17 +330,35 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
         )}
       />
 
-      {NUMBER_FIELDS.map(({ name, label }) => (
-        <div key={name} className="flex flex-col gap-1">
-          <Label htmlFor={name}>{label}</Label>
-          <Input id={name} type="number" {...register(name)} />
-          {errors[name] && (
-            <p role="alert" className="text-sm text-red-600">
-              {errors[name]?.message as string}
-            </p>
-          )}
-        </div>
-      ))}
+      <Controller
+        control={control}
+        name="retry_interval_sec"
+        render={({ field }) => (
+          <SelectField
+            id="retry_interval_sec"
+            label="Retry interval"
+            value={String(field.value ?? "")}
+            onChange={(v) => field.onChange(v)}
+            options={RETRY_INTERVAL_OPTIONS}
+            errorMessage={errors.retry_interval_sec?.message as string}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="max_attempts"
+        render={({ field }) => (
+          <SelectField
+            id="max_attempts"
+            label="Max attempts"
+            value={field.value == null ? "" : String(field.value)}
+            onChange={(v) => field.onChange(v === "" ? undefined : v)}
+            options={MAX_ATTEMPTS_OPTIONS}
+            errorMessage={errors.max_attempts?.message as string}
+          />
+        )}
+      />
 
       <fieldset className="flex flex-col gap-1">
         <legend className="text-sm font-medium">Notification channels</legend>
@@ -269,7 +402,13 @@ export function ConfigCreateForm({ onCreated }: ConfigCreateFormProps) {
       )}
 
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Creating…" : "Create config"}
+        {isSubmitting
+          ? mode === "edit"
+            ? "Saving…"
+            : "Creating…"
+          : mode === "edit"
+            ? "Save changes"
+            : "Create config"}
       </Button>
     </form>
   );

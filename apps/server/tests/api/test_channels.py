@@ -117,6 +117,73 @@ async def test_list_and_update(
     assert upd.json()["enabled"] is False
 
 
+async def test_update_keeps_secret_when_masked_value_sent(
+    authed_db_client: AsyncClient, chan_settings, httpx_mock: HTTPXMock
+) -> None:
+    """PUTting back the masked token (***cret) must keep the real secret."""
+    created = (await authed_db_client.post("/api/channels", json=NTFY_BODY)).json()
+    cid = created["id"]
+    masked_token = created["config"]["token"]
+    assert masked_token == "***cret"
+
+    # Simulate the edit form submitting the masked echo unchanged.
+    upd_body = {
+        **NTFY_BODY,
+        "name": "kept-secret",
+        "config": {**NTFY_BODY["config"], "token": masked_token},
+    }
+    upd = await authed_db_client.put(f"/api/channels/{cid}", json=upd_body)
+    assert upd.status_code == 200, upd.text
+
+    # A test-send proves the real token survived: notifier reads the stored
+    # secret and sets the Authorization header from it.
+    httpx_mock.add_response(
+        url="https://ntfy.supabin.com/oci-arm-alerts", status_code=200
+    )
+    resp = await authed_db_client.post(f"/api/channels/{cid}/test")
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    sent = httpx_mock.get_requests()[-1]
+    assert sent.headers.get("Authorization") == "Bearer tk_supersecret"
+
+
+async def test_update_keeps_secret_when_blank_value_sent(
+    authed_db_client: AsyncClient, chan_settings
+) -> None:
+    """A blank sensitive field on update keeps the stored secret (discord)."""
+    created = (await authed_db_client.post("/api/channels", json=DISCORD_BODY)).json()
+    cid = created["id"]
+
+    upd_body = {
+        **DISCORD_BODY,
+        "name": "kept",
+        "config": {"type": "discord", "webhook_url": ""},
+    }
+    upd = await authed_db_client.put(f"/api/channels/{cid}", json=upd_body)
+    assert upd.status_code == 200, upd.text
+    # Still masked echo of the original (***wxyz), not "***".
+    assert upd.json()["config"]["webhook_url"] == "***wxyz"
+
+
+async def test_update_replaces_secret_when_new_value_sent(
+    authed_db_client: AsyncClient, chan_settings
+) -> None:
+    """A real new secret on update replaces the stored one."""
+    created = (await authed_db_client.post("/api/channels", json=DISCORD_BODY)).json()
+    cid = created["id"]
+
+    upd_body = {
+        **DISCORD_BODY,
+        "config": {
+            "type": "discord",
+            "webhook_url": "https://discord.com/api/webhooks/2/zzzzNEWX",
+        },
+    }
+    upd = await authed_db_client.put(f"/api/channels/{cid}", json=upd_body)
+    assert upd.status_code == 200, upd.text
+    assert upd.json()["config"]["webhook_url"] == "***NEWX"
+
+
 async def test_delete(authed_db_client: AsyncClient, chan_settings) -> None:
     created = (await authed_db_client.post("/api/channels", json=DISCORD_BODY)).json()
     resp = await authed_db_client.request("DELETE", f"/api/channels/{created['id']}")

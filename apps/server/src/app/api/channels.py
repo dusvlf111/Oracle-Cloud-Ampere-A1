@@ -48,6 +48,43 @@ def _get_or_404(session: Session, channel_id: int) -> NotificationChannel:
     return ch
 
 
+# Sensitive config fields per channel type. On update, a blank or masked
+# (``***...``) value for one of these means "keep the existing stored secret"
+# so the masked GET echo can be PUT back without corrupting the secret.
+_SENSITIVE_FIELDS: dict[str, tuple[str, ...]] = {
+    "discord": ("webhook_url",),
+    "slack": ("webhook_url",),
+    "telegram": ("bot_token",),
+    "ntfy": ("token",),
+}
+
+
+def _is_unchanged_secret(value: object) -> bool:
+    """A blank or masked (``***...``) value means the client kept the secret."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped == "" or stripped.startswith("***")
+    return False
+
+
+def _merge_kept_secrets(
+    channel_type: str, new_cfg: dict, existing_cfg: dict
+) -> dict:
+    """Preserve existing secrets when the incoming value is blank/masked.
+
+    Implements the "변경 시에만 입력" behaviour: when editing a channel the web
+    form shows masked secrets; submitting without retyping (blank or the
+    ``***...`` echo) must keep the stored secret rather than overwrite it.
+    """
+    merged = dict(new_cfg)
+    for field in _SENSITIVE_FIELDS.get(channel_type, ()):
+        if _is_unchanged_secret(merged.get(field)) and field in existing_cfg:
+            merged[field] = existing_cfg[field]
+    return merged
+
+
 def _validate_type_match(body: ChannelCreate | ChannelUpdate) -> dict:
     """Ensure body.type matches the discriminated config.type; return cfg dict."""
     cfg = body.config.model_dump()
@@ -103,6 +140,12 @@ def update_channel(
 ) -> ChannelRead:
     ch = _get_or_404(session, channel_id)
     cfg = _validate_type_match(body)
+    # When the type is unchanged, let blank/masked sensitive fields fall back to
+    # the stored secret so the masked GET echo can be PUT back unchanged. If the
+    # type changes the old secrets no longer apply, so we take the body as-is.
+    if ch.type == body.type:
+        existing_cfg = decrypt_json(ch.config_enc)
+        cfg = _merge_kept_secrets(body.type, cfg, existing_cfg)
     ch.name = body.name
     ch.type = body.type
     ch.enabled = body.enabled

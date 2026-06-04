@@ -20,6 +20,7 @@ export function ChannelsPage() {
     null,
   );
   const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
+  const [editTarget, setEditTarget] = React.useState<number | null>(null);
   const [deleting, setDeleting] = React.useState(false);
 
   const invalidate = () =>
@@ -78,18 +79,40 @@ export function ChannelsPage() {
           <p className="text-sm text-gray-500">No channels yet.</p>
         )}
         {channels.map((ch) => (
-          <ChannelCard
-            key={ch.id}
-            channel={ch}
-            actions={
-              <>
-                <ChannelTestButton channelId={ch.id} />
-                <Button type="button" onClick={() => setDeleteTarget(ch.id)}>
-                  Delete
-                </Button>
-              </>
-            }
-          />
+          <div key={ch.id} className="flex flex-col gap-2">
+            <ChannelCard
+              channel={ch}
+              actions={
+                <>
+                  <ChannelTestButton channelId={ch.id} />
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      setEditTarget((t) => (t === ch.id ? null : ch.id))
+                    }
+                  >
+                    {editTarget === ch.id ? "Cancel" : "Edit"}
+                  </Button>
+                  <Button type="button" onClick={() => setDeleteTarget(ch.id)}>
+                    Delete
+                  </Button>
+                </>
+              }
+            />
+            {editTarget === ch.id && (
+              <div className="rounded border border-gray-200 p-3">
+                <ChannelCreateForm
+                  mode="edit"
+                  initial={ch}
+                  onSaved={() => {
+                    setEditTarget(null);
+                    setToast({ ok: true, message: "Channel updated." });
+                    void invalidate();
+                  }}
+                />
+              </div>
+            )}
+          </div>
         ))}
       </section>
 

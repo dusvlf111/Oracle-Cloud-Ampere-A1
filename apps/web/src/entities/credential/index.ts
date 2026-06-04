@@ -4,6 +4,7 @@ export type { Credential } from "./model/types";
 export {
   useCredentials,
   createCredential,
+  updateCredential,
   verifyCredential,
   deleteCredential,
   credentialsQueryKey,
