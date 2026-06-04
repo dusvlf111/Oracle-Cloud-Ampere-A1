@@ -40,9 +40,9 @@
     - [x] 11.1 Fernet 유틸 — `crypto.py` 에 `fernet_encrypt/fernet_decrypt` (키: `APP_SECRET` 에서 HKDF-SHA256 도출, 기존 AES-GCM 와 병존), 타입힌트+docstring
         - [x] 11.1.T1 pytest 테스트 작성 — 라운드트립, 변조 토큰 거부, AES-GCM 유틸 회귀
         - [x] 11.1.T2 `uv run pytest -q tests/unit/services/test_crypto_fernet.py tests/unit/services/test_crypto.py` 실행 및 검증
-    - [ ] 11.2 모델 전환 + 파일 마이그레이션 — `OciCredential.private_key_path` → `private_key_enc: str`, Alembic data migration: 기존 `/data/keys/{id}.pem` 읽기 → Fernet 암호화 → DB 저장 → **성공분만** 파일 삭제 (누락 파일은 경고 + 빈 값 → verify 실패 유도), downgrade 는 비지원 명시
-        - [ ] 11.2.T1 pytest 테스트 작성 — 마이그레이션 시나리오 (키 파일 있는 credential → upgrade → enc 저장+파일 삭제, 파일 누락 → 경고+스킵)
-        - [ ] 11.2.T2 `uv run pytest -q tests/unit/db/` + 임시 DB `alembic upgrade head` 실행 및 검증
+    - [x] 11.2 모델 전환 + 파일 마이그레이션 — `OciCredential.private_key_path` → `private_key_enc: str`, Alembic data migration: 기존 `/data/keys/{id}.pem` 읽기 → Fernet 암호화 → DB 저장 → **성공분만** 파일 삭제 (누락 파일은 경고 + 빈 값 → verify 실패 유도), downgrade 는 비지원 명시
+        - [x] 11.2.T1 pytest 테스트 작성 — 마이그레이션 시나리오 (키 파일 있는 credential → upgrade → enc 저장+파일 삭제, 파일 누락 → 경고+스킵)
+        - [x] 11.2.T2 `uv run pytest -q tests/unit/db/` + 임시 DB `alembic upgrade head` 실행 및 검증
     - [ ] 11.3 호출부 전환 — `oci_client.build_config` 가 `key_content` (복호화 PEM 문자열) 사용 (파일 경로 제거), `api/credentials.py` 업로드 → Fernet 암호화 저장 + PUT 재업로드 동일 처리, 삭제 시 파일 정리 로직 제거, `keys_dir` 설정 deprecated
         - [ ] 11.3.T1 pytest 테스트 작성 — 생성→DB 에 Fernet 토큰만 (평문/파일 없음), verify/launch 가 key_content 로 동작 (oci mock), PUT 키 재업로드/유지, 응답 무노출
         - [ ] 11.3.T2 `uv run pytest -q tests/api/test_credentials.py tests/unit/services/test_oci_client.py tests/unit/workers/` 실행 및 검증

@@ -47,7 +47,11 @@ class OciCredential(SQLModel, table=True):
     user_ocid: str
     fingerprint: str
     region: str  # e.g. "ap-chuncheon-1"
-    private_key_path: str  # /data/keys/{id}.pem
+    # Fernet-encrypted PEM private key (PRD §7.1). Replaces the legacy on-disk
+    # ``/data/keys/{id}.pem`` file; the plaintext PEM never touches disk. An
+    # empty string marks a credential whose key file was missing at migration
+    # time (verify fails → user must re-upload).
+    private_key_enc: str = ""
     passphrase_enc: str | None = None  # AES-256-GCM encrypted
     owner_id: int = Field(foreign_key="user.id", index=True)  # PRD §5
     created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -90,7 +90,13 @@ def test_indexes_present_on_table(engine) -> None:
 
 
 def test_alembic_upgrade_and_downgrade(tmp_path: Path) -> None:
-    """Run the full migration chain up to head then back down to base."""
+    """Run the migration chain up to the last reversible head then back to base.
+
+    The Push 11 ``b2c3d4e5f6a7`` (key DB encryption) migration is intentionally
+    one-way (it deletes the plaintext key files), so the down-chain test targets
+    ``a1b2c3d4e5f6`` — the head just below it — which keeps the original logentry
+    reversibility coverage intact without violating the one-way boundary.
+    """
     from alembic import command
     from alembic.config import Config
     from sqlalchemy import create_engine, inspect as sa_inspect
@@ -103,7 +109,7 @@ def test_alembic_upgrade_and_downgrade(tmp_path: Path) -> None:
     cfg.set_main_option("script_location", str(server_root / "alembic"))
     cfg.set_main_option("sqlalchemy.url", url)
 
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "a1b2c3d4e5f6")
     insp = sa_inspect(create_engine(url))
     assert "logentry" in insp.get_table_names()
     cols = {c["name"] for c in insp.get_columns("logentry")}
