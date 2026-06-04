@@ -117,7 +117,7 @@ async def test_disable_blocks_login_and_disables_configs(
             user_ocid="ocid1.user..a",
             fingerprint="fp",
             region="ap-chuncheon-1",
-            private_key_path="/k.pem",
+            private_key_enc="enc",
             owner_id=uid,
         )
         s.add(cred)

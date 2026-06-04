@@ -23,11 +23,11 @@ def cred_settings(tmp_path, monkeypatch: pytest.MonkeyPatch):
     from app.config import Settings
     from app.services import crypto
 
-    settings = Settings(app_secret="scope-secret", keys_dir=str(tmp_path / "keys"))
+    settings = Settings(app_secret="scope-secret")
     monkeypatch.setattr("app.config.get_settings", lambda: settings)
-    monkeypatch.setattr("app.api.credentials.get_settings", lambda: settings)
     monkeypatch.setattr(crypto, "get_settings", lambda: settings)
     crypto._key_for.cache_clear()
+    crypto._fernet_key_for.cache_clear()
     return settings
 
 

@@ -18,7 +18,7 @@ def seed_polling(session: Session, admin_settings):
         user_ocid="ocid1.user.oc1..u",
         fingerprint="ab:cd",
         region="ap-chuncheon-1",
-        private_key_path="/data/keys/1.pem",
+        private_key_enc="enc",
         owner_id=oid,
     )
     session.add(cred)

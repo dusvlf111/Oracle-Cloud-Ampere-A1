@@ -28,7 +28,7 @@ from app.db.models import (
     OciCredential,
     User,
 )
-from app.services.crypto import encrypt_json
+from app.services.crypto import encrypt_json, fernet_encrypt
 from app.workers import concurrency
 
 
@@ -69,7 +69,7 @@ def _make_credential(session: Session, name: str = "acct") -> OciCredential:
         user_ocid="ocid1.user.oc1..bbb",
         fingerprint="ab:cd:ef",
         region="ap-chuncheon-1",
-        private_key_path="/data/keys/x.pem",
+        private_key_enc=fernet_encrypt("-----BEGIN KEY-----\npem\n-----END KEY-----\n"),
         owner_id=_make_owner(session, f"owner-{name}"),
     )
     session.add(cred)

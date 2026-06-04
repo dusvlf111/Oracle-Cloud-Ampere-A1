@@ -26,7 +26,7 @@ from app.db.models import OciCredential, User
 from app.db.session import get_session
 from app.schemas.meta import ImageOption, SubnetOption
 from app.services import oci_client
-from app.services.crypto import decrypt
+from app.services.crypto import decrypt, fernet_decrypt
 
 logger = logging.getLogger("app.api.meta")
 
@@ -49,13 +49,18 @@ def _get_or_404(
 
 
 def _cred_dict(cred: OciCredential) -> dict:
+    # Decrypt the PEM into memory only; build_config reads ``key_content``.
+    # An empty stored value (missing-at-migration) → empty PEM → build_config
+    # raises → the route's except converges to a 502 instead of leaking a 500.
     return {
         "id": cred.id,
         "tenancy_ocid": cred.tenancy_ocid,
         "user_ocid": cred.user_ocid,
         "fingerprint": cred.fingerprint,
         "region": cred.region,
-        "private_key_path": cred.private_key_path,
+        "key_content": (
+            fernet_decrypt(cred.private_key_enc) if cred.private_key_enc else ""
+        ),
     }
 
 

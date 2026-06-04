@@ -21,11 +21,11 @@ def cred_settings(tmp_path, monkeypatch: pytest.MonkeyPatch):
     from app.config import Settings
     from app.services import crypto
 
-    settings = Settings(app_secret="qscope-secret", keys_dir=str(tmp_path / "keys"))
+    settings = Settings(app_secret="qscope-secret")
     monkeypatch.setattr("app.config.get_settings", lambda: settings)
-    monkeypatch.setattr("app.api.credentials.get_settings", lambda: settings)
     monkeypatch.setattr(crypto, "get_settings", lambda: settings)
     crypto._key_for.cache_clear()
+    crypto._fernet_key_for.cache_clear()
     return settings
 
 
@@ -40,7 +40,7 @@ def _seed_owned(session: Session, owner_id: int, name: str) -> int:
         user_ocid="ocid1.user..a",
         fingerprint="fp",
         region="ap-chuncheon-1",
-        private_key_path="/k.pem",
+        private_key_enc="enc",
         owner_id=owner_id,
     )
     session.add(cred)
