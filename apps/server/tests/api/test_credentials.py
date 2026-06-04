@@ -140,6 +140,145 @@ async def test_verify_not_found(
     assert resp.json()["error"]["code"] == "credential_not_found"
 
 
+async def _update(client: AsyncClient, credential_id: int, *, with_key: bool, **overrides):
+    data = {
+        "name": overrides.get("name", "renamed"),
+        "tenancy_ocid": overrides.get("tenancy_ocid", "ocid1.tenancy.oc1..aaaaaaaatenancy2"),
+        "user_ocid": overrides.get("user_ocid", "ocid1.user.oc1..aaaaaaaauser2"),
+        "fingerprint": overrides.get("fingerprint", _FINGERPRINT),
+        "region": overrides.get("region", "ap-seoul-1"),
+    }
+    if "passphrase" in overrides:
+        data["passphrase"] = overrides["passphrase"]
+    files = None
+    if with_key:
+        files = {
+            "private_key": (
+                "oci2.pem",
+                b"-----BEGIN KEY-----\nNEWKEY\n-----END KEY-----",
+                "application/x-pem-file",
+            )
+        }
+    return await client.put(
+        f"/api/credentials/{credential_id}", data=data, files=files
+    )
+
+
+async def test_update_without_key_keeps_existing_file(
+    authed_db_client: AsyncClient, cred_settings
+) -> None:
+    """PUT without a re-uploaded key keeps the existing key file untouched."""
+    created = (await _create(authed_db_client)).json()
+    key_path = cred_settings.keys_dir + f"/{created['id']}.pem"
+    original = open(key_path, "rb").read()
+
+    resp = await _update(
+        authed_db_client, created["id"], with_key=False, name="renamed"
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["name"] == "renamed"
+    assert body["region"] == "ap-seoul-1"
+    # File on disk is unchanged.
+    assert open(key_path, "rb").read() == original
+
+
+async def test_update_with_key_overwrites_file_0600(
+    authed_db_client: AsyncClient, cred_settings
+) -> None:
+    created = (await _create(authed_db_client)).json()
+    key_path = cred_settings.keys_dir + f"/{created['id']}.pem"
+
+    resp = await _update(authed_db_client, created["id"], with_key=True)
+    assert resp.status_code == 200, resp.text
+    assert b"NEWKEY" in open(key_path, "rb").read()
+    mode = stat.S_IMODE(os.stat(key_path).st_mode)
+    assert mode == 0o600
+
+
+async def test_update_blank_passphrase_keeps_existing(
+    authed_db_client: AsyncClient, cred_settings
+) -> None:
+    created = (await _create(authed_db_client, passphrase="orig-pp")).json()
+    assert created["has_passphrase"] is True
+    # No passphrase field in the update → kept.
+    resp = await _update(authed_db_client, created["id"], with_key=False)
+    assert resp.status_code == 200
+    assert resp.json()["has_passphrase"] is True
+
+
+async def test_update_new_passphrase_re_encrypts(
+    authed_db_client: AsyncClient, cred_settings, session
+) -> None:
+    from app.db.models import OciCredential
+
+    created = (await _create(authed_db_client)).json()
+    assert created["has_passphrase"] is False
+    resp = await _update(
+        authed_db_client, created["id"], with_key=False, passphrase="newpp"
+    )
+    assert resp.status_code == 200
+    assert resp.json()["has_passphrase"] is True
+    # The stored value decrypts back to the new passphrase.
+    row = session.get(OciCredential, created["id"])
+    session.refresh(row)
+    assert crypto.decrypt(row.passphrase_enc).decode() == "newpp"
+
+
+async def test_update_keeps_ocid_when_masked_echo_sent(
+    authed_db_client: AsyncClient, cred_settings, session
+) -> None:
+    """Submitting the masked OCID/fingerprint echo keeps the stored values."""
+    from app.db.models import OciCredential
+
+    created = (await _create(authed_db_client)).json()
+    # The read response masks these; the edit form would PUT them back as-is.
+    masked_tenancy = created["tenancy_ocid"]
+    masked_user = created["user_ocid"]
+    masked_fp = created["fingerprint"]
+    assert "*" in masked_tenancy and "*" in masked_fp
+
+    resp = await _update(
+        authed_db_client,
+        created["id"],
+        with_key=False,
+        name="kept-ocids",
+        tenancy_ocid=masked_tenancy,
+        user_ocid=masked_user,
+        fingerprint=masked_fp,
+        region="ap-seoul-1",
+    )
+    assert resp.status_code == 200, resp.text
+
+    # The stored values are the originals, not the masked echo.
+    row = session.get(OciCredential, created["id"])
+    session.refresh(row)
+    assert row.tenancy_ocid == "ocid1.tenancy.oc1..aaaaaaaatenancy"
+    assert row.user_ocid == "ocid1.user.oc1..aaaaaaaauser"
+    assert row.fingerprint == _FINGERPRINT
+    assert row.region == "ap-seoul-1"
+    assert row.name == "kept-ocids"
+
+
+async def test_update_rejects_malformed_field(
+    authed_db_client: AsyncClient, cred_settings
+) -> None:
+    created = (await _create(authed_db_client)).json()
+    resp = await _update(
+        authed_db_client, created["id"], with_key=False, region="NOPE"
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "validation_error"
+
+
+async def test_update_not_found(
+    authed_db_client: AsyncClient, cred_settings
+) -> None:
+    resp = await _update(authed_db_client, 99999, with_key=False)
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "credential_not_found"
+
+
 async def test_delete_removes_key_file(
     authed_db_client: AsyncClient, cred_settings
 ) -> None:

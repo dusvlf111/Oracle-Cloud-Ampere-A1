@@ -82,6 +82,65 @@ class CredentialCreate(BaseModel):
         )
 
 
+class CredentialUpdate(BaseModel):
+    """Validated credential update payload (PUT /api/credentials/{id}).
+
+    Same field rules as :class:`CredentialCreate`. The private key file is
+    optional on update (handled in the router): if no file is re-uploaded the
+    existing key on disk is kept. ``passphrase`` is likewise optional and only
+    re-encrypted when a non-empty value is provided.
+    """
+
+    name: str
+    tenancy_ocid: str
+    user_ocid: str
+    fingerprint: str
+    region: str
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _strip(cls, v: object) -> object:
+        return normalize_str(v)
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, v: str) -> str:
+        if not v:
+            raise ValueError("name must not be blank")
+        return v
+
+    @field_validator("tenancy_ocid")
+    @classmethod
+    def _tenancy(cls, v: str) -> str:
+        return validate_pattern(
+            v, TENANCY_OCID_RE, "tenancy_ocid must start with 'ocid1.tenancy.'"
+        )
+
+    @field_validator("user_ocid")
+    @classmethod
+    def _user(cls, v: str) -> str:
+        return validate_pattern(
+            v, USER_OCID_RE, "user_ocid must start with 'ocid1.user.'"
+        )
+
+    @field_validator("fingerprint")
+    @classmethod
+    def _fingerprint(cls, v: str) -> str:
+        return validate_pattern(
+            v,
+            FINGERPRINT_RE,
+            "fingerprint must be 16 colon-separated hex octets "
+            "(e.g. ab:cd:ef:...:90)",
+        )
+
+    @field_validator("region")
+    @classmethod
+    def _region(cls, v: str) -> str:
+        return validate_pattern(
+            v, REGION_RE, "region must look like 'ap-chuncheon-1'"
+        )
+
+
 class CredentialRead(BaseModel):
     id: int
     name: str

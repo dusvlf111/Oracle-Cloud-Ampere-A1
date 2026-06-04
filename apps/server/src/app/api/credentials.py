@@ -25,7 +25,12 @@ from app.api.deps import AppError, require_login
 from app.config import get_settings
 from app.db.models import OciCredential
 from app.db.session import get_session
-from app.schemas.credential import CredentialCreate, CredentialRead, VerifyResponse
+from app.schemas.credential import (
+    CredentialCreate,
+    CredentialRead,
+    CredentialUpdate,
+    VerifyResponse,
+)
 from app.services import oci_client
 from app.services.crypto import decrypt, encrypt
 
@@ -120,6 +125,82 @@ async def create_credential(
     logger.info(
         "OCI credential created", extra={"credential_id": cred.id}
     )
+    return CredentialRead.from_model(cred)
+
+
+@router.put("/{credential_id}", response_model=CredentialRead)
+async def update_credential(
+    credential_id: int,
+    name: str = Form(...),
+    tenancy_ocid: str = Form(...),
+    user_ocid: str = Form(...),
+    fingerprint: str = Form(...),
+    region: str = Form(...),
+    # Optional re-upload: if omitted (or empty), the existing key file is kept.
+    private_key: UploadFile | None = File(default=None),
+    # Optional passphrase: empty/omitted keeps the existing encrypted value;
+    # a non-empty value re-encrypts. There is currently no way to clear a
+    # passphrase via this route (matches the create form's behaviour).
+    passphrase: str | None = Form(default=None),
+    _user: str = Depends(require_login),
+    session: Session = Depends(get_session),
+) -> CredentialRead:
+    cred = _get_or_404(session, credential_id)
+
+    # The list/read response masks OCIDs / fingerprint (``...aaa***`` /
+    # ``ab:cd:**:**``). When the edit form submits a value back unchanged it is
+    # still masked, so a literal ``*`` means "keep the stored value": substitute
+    # the existing value before validation so the masked echo never fails the
+    # strict patterns nor overwrites the real secret.
+    def _kept(submitted: str, existing: str) -> str:
+        return existing if "*" in submitted else submitted
+
+    tenancy_ocid = _kept(tenancy_ocid, cred.tenancy_ocid)
+    user_ocid = _kept(user_ocid, cred.user_ocid)
+    fingerprint = _kept(fingerprint, cred.fingerprint)
+
+    # Validate + normalise the multipart Form fields (same rules as create).
+    try:
+        payload = CredentialUpdate(
+            name=name,
+            tenancy_ocid=tenancy_ocid,
+            user_ocid=user_ocid,
+            fingerprint=fingerprint,
+            region=region,
+        )
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc
+
+    cred.name = payload.name
+    cred.tenancy_ocid = payload.tenancy_ocid
+    cred.user_ocid = payload.user_ocid
+    cred.fingerprint = payload.fingerprint
+    cred.region = payload.region
+
+    # Only re-encrypt the passphrase when a non-empty value is provided; an
+    # empty string means "leave the stored passphrase untouched".
+    if passphrase:
+        cred.passphrase_enc = encrypt(passphrase.encode())
+
+    # Only overwrite the key file when a non-empty upload is provided.
+    if private_key is not None:
+        content = await private_key.read()
+        if content:
+            key_path = _key_path(cred.id)
+            key_path.parent.mkdir(parents=True, exist_ok=True)
+            fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            try:
+                os.write(fd, content)
+            finally:
+                os.close(fd)
+            os.chmod(key_path, 0o600)
+            cred.private_key_path = str(key_path)
+
+    session.add(cred)
+    session.commit()
+    session.refresh(cred)
+
+    logger.info("OCI credential updated", extra={"credential_id": cred.id})
     return CredentialRead.from_model(cred)
 
 
