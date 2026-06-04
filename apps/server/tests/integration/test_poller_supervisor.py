@@ -15,7 +15,7 @@ import pytest
 from sqlmodel import Session
 
 import app.workers.poller as poller_mod
-from app.db.models import InstanceConfig, OciCredential
+from app.db.models import InstanceConfig, OciCredential, User
 from app.workers.poller import PollerSupervisor, poller_supervisor
 
 
@@ -36,6 +36,14 @@ def stub_task(monkeypatch):
     return state
 
 
+def _owner(session: Session, username="owner") -> int:
+    u = User(username=username, password_hash="h", role="admin", status="active")
+    session.add(u)
+    session.commit()
+    session.refresh(u)
+    return u.id
+
+
 def _cred(session: Session, name="acct") -> OciCredential:
     c = OciCredential(
         name=name,
@@ -44,6 +52,7 @@ def _cred(session: Session, name="acct") -> OciCredential:
         fingerprint="ab:cd",
         region="ap-chuncheon-1",
         private_key_path="/data/keys/x.pem",
+        owner_id=_owner(session, f"owner-{name}"),
     )
     session.add(c)
     session.commit()
@@ -55,6 +64,7 @@ def _config(session: Session, cred, *, enabled=True, name="cfg") -> InstanceConf
     cfg = InstanceConfig(
         name=name,
         credential_id=cred.id,
+        owner_id=cred.owner_id,
         enabled=enabled,
         image_ocid="ocid1.image..x",
         subnet_ocid="ocid1.subnet..x",

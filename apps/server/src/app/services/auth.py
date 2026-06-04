@@ -1,26 +1,32 @@
-"""Single-admin authentication (PRD §7.7).
+"""User-based authentication (PRD §5, §6).
 
-Argon2id password hashing/verification + credential comparison against the
-admin pair stored in the ``AppSetting`` key-value table (keys
-``admin_username`` / ``admin_password_hash``). No env-based credentials: the
-admin is created at runtime via the first-signup flow (``POST /api/auth/setup``)
-and persisted in the database, sidestepping PaaS env interpolation issues with
-the ``$`` characters in Argon2 hashes. Exactly one admin is allowed.
+Argon2id password hashing/verification against the ``User`` table. Push 9
+replaces the legacy single-admin ``AppSetting`` key-value pair with proper user
+rows: the first signup becomes ``role=admin, status=active``; every subsequent
+signup lands as ``role=user, status=pending`` until an admin approves it.
+
+Only ``active`` users may authenticate; ``pending`` / ``disabled`` accounts are
+surfaced to the caller (login endpoint) so it can emit the right 403 code.
 """
 
 from __future__ import annotations
 
-import hmac
+from datetime import datetime
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
-from sqlmodel import Session
+from sqlmodel import Session, func, select
 
-from app.db.models import AppSetting
+from app.db.models import User
 
-# AppSetting keys for the single admin credential pair.
-ADMIN_USERNAME_KEY = "admin_username"
-ADMIN_PASSWORD_HASH_KEY = "admin_password_hash"
+# User status values (PRD §5).
+STATUS_PENDING = "pending"
+STATUS_ACTIVE = "active"
+STATUS_DISABLED = "disabled"
+
+# Roles (PRD §5).
+ROLE_ADMIN = "admin"
+ROLE_USER = "user"
 
 # Module-level hasher with OWASP-reasonable defaults.
 _hasher = PasswordHasher()
@@ -39,52 +45,78 @@ def verify_password(password_hash: str, password: str) -> bool:
         return False
 
 
-def _get_setting(session: Session, key: str) -> str | None:
-    row = session.get(AppSetting, key)
-    return row.value if row is not None else None
+def user_count(session: Session) -> int:
+    """Total number of user rows (0 ⇒ the next signup is the bootstrap admin)."""
+    return int(session.exec(select(func.count()).select_from(User)).one())
+
+
+def get_user_by_username(session: Session, username: str) -> User | None:
+    return session.exec(select(User).where(User.username == username)).first()
 
 
 def admin_exists(session: Session) -> bool:
-    """Return True iff an admin password hash has been persisted."""
-    return _get_setting(session, ADMIN_PASSWORD_HASH_KEY) is not None
+    """True iff at least one user exists (legacy ``needs_setup`` semantics).
 
-
-def get_admin_username(session: Session) -> str | None:
-    """Return the persisted admin username, or None if no admin exists."""
-    return _get_setting(session, ADMIN_USERNAME_KEY)
-
-
-def create_admin(session: Session, username: str, password: str) -> None:
-    """Persist the single admin (username + Argon2id hash) and commit.
-
-    Callers must ensure ``admin_exists`` is False first; this performs an
-    unconditional upsert of both keys.
+    Retained so ``GET /api/auth/setup`` keeps reporting whether the bootstrap
+    flow is still available.
     """
-    password_hash = hash_password(password)
-    for key, value in (
-        (ADMIN_USERNAME_KEY, username),
-        (ADMIN_PASSWORD_HASH_KEY, password_hash),
-    ):
-        row = session.get(AppSetting, key)
-        if row is None:
-            session.add(AppSetting(key=key, value=value))
-        else:
-            row.value = value
-            session.add(row)
+    return user_count(session) > 0
+
+
+def active_admin_count(session: Session) -> int:
+    """Number of admins that can currently log in (status=active)."""
+    return int(
+        session.exec(
+            select(func.count())
+            .select_from(User)
+            .where(User.role == ROLE_ADMIN, User.status == STATUS_ACTIVE)
+        ).one()
+    )
+
+
+def register_user(session: Session, username: str, password: str) -> User:
+    """Create a user. The first ever user is an active admin; rest are pending.
+
+    Raises ``ValueError("username_taken")`` if the username already exists. The
+    caller maps that to a 409. Commits and returns the persisted row.
+    """
+    if get_user_by_username(session, username) is not None:
+        raise ValueError("username_taken")
+
+    is_bootstrap = user_count(session) == 0
+    now = datetime.utcnow()
+    user = User(
+        username=username,
+        password_hash=hash_password(password),
+        role=ROLE_ADMIN if is_bootstrap else ROLE_USER,
+        status=STATUS_ACTIVE if is_bootstrap else STATUS_PENDING,
+        created_at=now,
+        approved_at=now if is_bootstrap else None,
+    )
+    session.add(user)
     session.commit()
+    session.refresh(user)
+    return user
 
 
-def authenticate(session: Session, username: str, password: str) -> bool:
-    """Validate credentials against the persisted single admin.
+def authenticate(session: Session, username: str, password: str) -> User | None:
+    """Return the ``User`` iff credentials are valid, else ``None``.
 
-    Username compared in constant time; password verified via Argon2. Returns
-    False if no admin has been created yet.
+    A return value does NOT imply the user may log in — the caller must check
+    ``status`` (only ``active`` is allowed) and emit ``account_pending`` /
+    ``account_disabled`` as appropriate. Password is always verified (even for a
+    missing user, against a dummy hash) to keep timing uniform.
     """
-    stored_username = _get_setting(session, ADMIN_USERNAME_KEY)
-    stored_hash = _get_setting(session, ADMIN_PASSWORD_HASH_KEY)
-    if not stored_hash or stored_username is None:
-        return False
-    username_ok = hmac.compare_digest(username, stored_username)
-    password_ok = verify_password(stored_hash, password)
-    # Evaluate both before returning to avoid short-circuit timing leaks.
-    return username_ok and password_ok
+    user = get_user_by_username(session, username)
+    if user is None:
+        # Verify against a throwaway hash to avoid a username-enumeration timing
+        # side channel, then fail.
+        verify_password(
+            "$argon2id$v=19$m=65536,t=3,p=4$"
+            "c29tZXNhbHR2YWx1ZQ$0000000000000000000000000000000000000000000",
+            password,
+        )
+        return None
+    if not verify_password(user.password_hash, password):
+        return None
+    return user

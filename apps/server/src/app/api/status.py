@@ -13,8 +13,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from app.api.deps import require_login
-from app.db.models import Attempt, InstanceConfig, OciCredential
+from app.api.deps import is_admin, require_login
+from app.db.models import Attempt, InstanceConfig, OciCredential, User
 from app.db.session import get_session
 from app.schemas.status import PollingStatusItem
 
@@ -23,14 +23,18 @@ router = APIRouter(prefix="/api/status", tags=["status"])
 
 @router.get("/polling", response_model=list[PollingStatusItem])
 def polling_status(
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> list[PollingStatusItem]:
-    configs = session.exec(
+    stmt = (
         select(InstanceConfig)
         .where(InstanceConfig.enabled == True)  # noqa: E712 — SQL boolean compare
         .order_by(InstanceConfig.id)
-    ).all()
+    )
+    # Ownership scope (PRD §6.3): non-admins only see their own configs.
+    if not is_admin(user):
+        stmt = stmt.where(InstanceConfig.owner_id == user.id)
+    configs = session.exec(stmt).all()
 
     items: list[PollingStatusItem] = []
     for cfg in configs:

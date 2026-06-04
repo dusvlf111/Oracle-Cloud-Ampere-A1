@@ -21,9 +21,9 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from sqlmodel import Session, select
 
-from app.api.deps import AppError, require_login
+from app.api.deps import AppError, is_admin, require_login
 from app.config import get_settings
-from app.db.models import OciCredential
+from app.db.models import OciCredential, User
 from app.db.session import get_session
 from app.schemas.credential import (
     CredentialCreate,
@@ -43,9 +43,12 @@ def _key_path(credential_id: int) -> Path:
     return Path(get_settings().keys_dir) / f"{credential_id}.pem"
 
 
-def _get_or_404(session: Session, credential_id: int) -> OciCredential:
+def _get_or_404(
+    session: Session, credential_id: int, user: User
+) -> OciCredential:
     cred = session.get(OciCredential, credential_id)
-    if cred is None:
+    # Hide other owners' resources behind a 404 (PRD §6.3 — no existence leak).
+    if cred is None or (not is_admin(user) and cred.owner_id != user.id):
         raise AppError(
             "credential_not_found",
             404,
@@ -57,10 +60,13 @@ def _get_or_404(session: Session, credential_id: int) -> OciCredential:
 
 @router.get("", response_model=list[CredentialRead])
 def list_credentials(
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> list[CredentialRead]:
-    rows = session.exec(select(OciCredential).order_by(OciCredential.id)).all()
+    stmt = select(OciCredential).order_by(OciCredential.id)
+    if not is_admin(user):
+        stmt = stmt.where(OciCredential.owner_id == user.id)
+    rows = session.exec(stmt).all()
     return [CredentialRead.from_model(c) for c in rows]
 
 
@@ -73,7 +79,7 @@ async def create_credential(
     region: str = Form(...),
     private_key: UploadFile = File(...),
     passphrase: str | None = Form(default=None),
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> CredentialRead:
     # Validate + normalise the multipart Form fields. The credentials route is
@@ -101,6 +107,7 @@ async def create_credential(
         region=payload.region,
         private_key_path="",  # set after we know the id
         passphrase_enc=encrypt((passphrase or "").encode()) if passphrase else None,
+        owner_id=user.id,
     )
     session.add(cred)
     session.commit()
@@ -142,10 +149,10 @@ async def update_credential(
     # a non-empty value re-encrypts. There is currently no way to clear a
     # passphrase via this route (matches the create form's behaviour).
     passphrase: str | None = Form(default=None),
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> CredentialRead:
-    cred = _get_or_404(session, credential_id)
+    cred = _get_or_404(session, credential_id, user)
 
     # The list/read response masks OCIDs / fingerprint (``...aaa***`` /
     # ``ab:cd:**:**``). When the edit form submits a value back unchanged it is
@@ -207,10 +214,10 @@ async def update_credential(
 @router.post("/{credential_id}/verify", response_model=VerifyResponse)
 async def verify_credential(
     credential_id: int,
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> VerifyResponse:
-    cred = _get_or_404(session, credential_id)
+    cred = _get_or_404(session, credential_id, user)
     # verify must NEVER 500: any unexpected error (decrypt failure, malformed
     # config, OCI exception) collapses into {ok: false, error} (hardening §3).
     try:
@@ -241,10 +248,10 @@ async def verify_credential(
 @router.delete("/{credential_id}", status_code=204)
 def delete_credential(
     credential_id: int,
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> Response:
-    cred = _get_or_404(session, credential_id)
+    cred = _get_or_404(session, credential_id, user)
     if cred.private_key_path:
         try:
             os.remove(cred.private_key_path)

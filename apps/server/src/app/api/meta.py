@@ -21,8 +21,8 @@ import logging
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
-from app.api.deps import AppError, require_login
-from app.db.models import OciCredential
+from app.api.deps import AppError, is_admin, require_login
+from app.db.models import OciCredential, User
 from app.db.session import get_session
 from app.schemas.meta import ImageOption, SubnetOption
 from app.services import oci_client
@@ -33,9 +33,12 @@ logger = logging.getLogger("app.api.meta")
 router = APIRouter(prefix="/api/meta", tags=["meta"])
 
 
-def _get_or_404(session: Session, credential_id: int) -> OciCredential:
+def _get_or_404(
+    session: Session, credential_id: int, user: User
+) -> OciCredential:
     cred = session.get(OciCredential, credential_id)
-    if cred is None:
+    # Ownership scope (PRD §6.3): meta lookups only for owned credentials.
+    if cred is None or (not is_admin(user) and cred.owner_id != user.id):
         raise AppError(
             "credential_not_found",
             404,
@@ -71,10 +74,10 @@ def _to_app_error(exc: Exception) -> AppError:
 @router.get("/availability-domains", response_model=list[str])
 async def list_availability_domains(
     credential_id: int,
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> list[str]:
-    cred = _get_or_404(session, credential_id)
+    cred = _get_or_404(session, credential_id, user)
     try:
         # _passphrase/_cred_dict inside the try so a decrypt failure also
         # converges to 502 instead of leaking a 500 (hardening §3).
@@ -94,10 +97,10 @@ async def list_availability_domains(
 async def list_images(
     credential_id: int,
     shape: str = "VM.Standard.A1.Flex",
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> list[ImageOption]:
-    cred = _get_or_404(session, credential_id)
+    cred = _get_or_404(session, credential_id, user)
     try:
         rows = await oci_client.fetch_images(
             _cred_dict(cred), shape, passphrase=_passphrase(cred)
@@ -115,10 +118,10 @@ async def list_images(
 @router.get("/subnets", response_model=list[SubnetOption])
 async def list_subnets(
     credential_id: int,
-    _user: str = Depends(require_login),
+    user: User = Depends(require_login),
     session: Session = Depends(get_session),
 ) -> list[SubnetOption]:
-    cred = _get_or_404(session, credential_id)
+    cred = _get_or_404(session, credential_id, user)
     try:
         rows = await oci_client.fetch_subnets(
             _cred_dict(cred), passphrase=_passphrase(cred)

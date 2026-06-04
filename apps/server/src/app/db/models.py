@@ -14,6 +14,25 @@ from datetime import datetime
 from sqlmodel import Field, Relationship, SQLModel
 
 
+class User(SQLModel, table=True):
+    """An authenticated account (PRD §5, §6).
+
+    The first account ever created becomes ``role=admin, status=active``
+    (absorbing the legacy single-admin ``setup`` flow); every subsequent signup
+    lands as ``role=user, status=pending`` and must be approved by an admin
+    before it can log in. Passwords are Argon2id hashes (never stored plain).
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    username: str = Field(unique=True, index=True)  # 3+ chars
+    password_hash: str  # Argon2id
+    role: str = Field(default="user", index=True)  # "admin" | "user"
+    status: str = Field(default="pending", index=True)  # pending|active|disabled
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    approved_at: datetime | None = None
+    approved_by: int | None = Field(default=None, foreign_key="user.id")
+
+
 class ConfigChannelLink(SQLModel, table=True):
     """Many-to-many link between ``InstanceConfig`` and ``NotificationChannel``."""
 
@@ -30,6 +49,7 @@ class OciCredential(SQLModel, table=True):
     region: str  # e.g. "ap-chuncheon-1"
     private_key_path: str  # /data/keys/{id}.pem
     passphrase_enc: str | None = None  # AES-256-GCM encrypted
+    owner_id: int = Field(foreign_key="user.id", index=True)  # PRD §5
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     configs: list["InstanceConfig"] = Relationship(back_populates="credential")
@@ -39,6 +59,7 @@ class InstanceConfig(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str
     credential_id: int = Field(foreign_key="ocicredential.id")
+    owner_id: int = Field(foreign_key="user.id", index=True)  # PRD §5
     enabled: bool = True
 
     shape: str = "VM.Standard.A1.Flex"
@@ -73,6 +94,7 @@ class NotificationChannel(SQLModel, table=True):
     type: str = Field(index=True)  # "discord" | "slack" | "telegram" | "ntfy"
     enabled: bool = True
     config_enc: str  # AES-256-GCM encrypted JSON (channel-specific config)
+    owner_id: int = Field(foreign_key="user.id", index=True)  # PRD §5
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

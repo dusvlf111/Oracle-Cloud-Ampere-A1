@@ -41,15 +41,25 @@ async def client() -> AsyncClient:
 
 
 @pytest.fixture
-def admin_settings(engine, db_app) -> None:
-    """Seed the single admin in the test DB (DB-based auth).
+def admin_settings(engine, db_app):
+    """Seed the bootstrap admin User in the test DB (DB-based auth, Push 9).
 
     Activates the in-memory ``get_session`` override (via ``db_app``) and
-    persists the admin credentials so ``/api/auth/login`` succeeds. Replaces the
-    former env-based credential fixture.
+    persists an active admin so ``/api/auth/login`` succeeds. Returns the admin
+    ``User`` so ownership-scope tests can reference its id.
     """
+    from app.db.models import User
+
     with Session(engine) as s:
-        _auth.create_admin(s, TEST_USERNAME, TEST_PASSWORD)
+        admin = _auth.register_user(s, TEST_USERNAME, TEST_PASSWORD)
+        # Detach a simple record the caller can read post-commit.
+        return User(
+            id=admin.id,
+            username=admin.username,
+            password_hash=admin.password_hash,
+            role=admin.role,
+            status=admin.status,
+        )
 
 
 @pytest_asyncio.fixture
@@ -134,3 +144,58 @@ async def authed_db_client(admin_settings) -> AsyncClient:
         )
         assert resp.status_code == 200, resp.text
         yield ac
+
+
+@pytest.fixture
+def make_user(engine):
+    """Factory: create an active (default) ``User`` and return its id.
+
+    Used by ownership-scope / user-management tests to seed multiple accounts.
+    """
+    from app.db.models import User
+    from app.services.auth import hash_password
+
+    def _make(
+        username: str,
+        password: str = "user-pass-123",
+        *,
+        role: str = "user",
+        status: str = "active",
+    ) -> int:
+        with Session(engine) as s:
+            u = User(
+                username=username,
+                password_hash=hash_password(password),
+                role=role,
+                status=status,
+            )
+            s.add(u)
+            s.commit()
+            s.refresh(u)
+            return u.id
+
+    return _make
+
+
+@pytest_asyncio.fixture
+async def login_as():
+    """Factory: return a logged-in AsyncClient for the given credentials.
+
+    The caller is responsible for having seeded an active user (e.g. via
+    ``make_user``). The returned clients share the in-memory app/DB override.
+    """
+    clients: list[AsyncClient] = []
+
+    async def _login(username: str, password: str = "user-pass-123") -> AsyncClient:
+        transport = ASGITransport(app=app)
+        ac = AsyncClient(transport=transport, base_url="http://test")
+        resp = await ac.post(
+            "/api/auth/login", json={"username": username, "password": password}
+        )
+        assert resp.status_code == 200, resp.text
+        clients.append(ac)
+        return ac
+
+    yield _login
+    for ac in clients:
+        await ac.aclose()

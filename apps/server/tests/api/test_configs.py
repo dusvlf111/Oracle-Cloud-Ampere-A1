@@ -10,8 +10,9 @@ from app.db.models import NotificationChannel, OciCredential
 
 
 @pytest.fixture
-def seed(session: Session):
-    """Seed a credential + two channels in the shared in-memory DB."""
+def seed(session: Session, admin_settings):
+    """Seed a credential + two channels owned by the bootstrap admin."""
+    oid = admin_settings.id
     cred = OciCredential(
         name="acct",
         tenancy_ocid="ocid1.tenancy.oc1..t",
@@ -19,9 +20,14 @@ def seed(session: Session):
         fingerprint="ab:cd:ef",
         region="ap-chuncheon-1",
         private_key_path="/data/keys/1.pem",
+        owner_id=oid,
     )
-    ch1 = NotificationChannel(name="disc", type="discord", config_enc="x")
-    ch2 = NotificationChannel(name="ntfy", type="ntfy", config_enc="y")
+    ch1 = NotificationChannel(
+        name="disc", type="discord", config_enc="x", owner_id=oid
+    )
+    ch2 = NotificationChannel(
+        name="ntfy", type="ntfy", config_enc="y", owner_id=oid
+    )
     session.add_all([cred, ch1, ch2])
     session.commit()
     session.refresh(cred)

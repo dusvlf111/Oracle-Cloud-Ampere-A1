@@ -10,7 +10,8 @@ from app.db.models import Attempt, InstanceConfig, OciCredential
 
 
 @pytest.fixture
-def seed_polling(session: Session):
+def seed_polling(session: Session, admin_settings):
+    oid = admin_settings.id
     cred = OciCredential(
         name="acct",
         tenancy_ocid="ocid1.tenancy.oc1..t",
@@ -18,6 +19,7 @@ def seed_polling(session: Session):
         fingerprint="ab:cd",
         region="ap-chuncheon-1",
         private_key_path="/data/keys/1.pem",
+        owner_id=oid,
     )
     session.add(cred)
     session.commit()
@@ -27,6 +29,7 @@ def seed_polling(session: Session):
         c = InstanceConfig(
             name=name,
             credential_id=cred.id,
+            owner_id=oid,
             enabled=enabled,
             shape="VM.Standard.A1.Flex",
             ocpus=4,

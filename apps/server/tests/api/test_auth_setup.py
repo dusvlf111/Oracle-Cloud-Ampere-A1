@@ -1,15 +1,15 @@
-"""First-signup admin setup flow (PRD §7.7).
+"""Backward-compatible setup flow (PRD §6.1, Open Question #1).
 
 GET  /api/auth/setup  → {needs_setup}
-POST /api/auth/setup  → create admin + auto-login (or 409 if already done)
+POST /api/auth/setup  → DEPRECATED wrapper; forwards to register. The first
+                        signup becomes admin/active + auto-login; later signups
+                        are pending users (no longer 409 "already done").
 """
 
 from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
-
-from app.api import ratelimit
 
 NEW_USERNAME = "operator"
 NEW_PASSWORD = "sup3r-secret-pw"
@@ -30,14 +30,17 @@ async def test_setup_creates_admin_and_auto_logs_in(
         "/api/auth/setup",
         json={"username": NEW_USERNAME, "password": NEW_PASSWORD},
     )
-    assert resp.status_code == 200, resp.text
-    assert resp.json() == {"username": NEW_USERNAME}
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["username"] == NEW_USERNAME
+    assert body["role"] == "admin"
+    assert body["status"] == "active"
     assert "session" in resp.headers.get("set-cookie", "")
 
     # Auto-login: the session cookie grants immediate access to /me.
     me = await client.get("/api/auth/me")
     assert me.status_code == 200
-    assert me.json() == {"username": NEW_USERNAME}
+    assert me.json()["username"] == NEW_USERNAME
 
 
 async def test_setup_status_false_after_setup(
@@ -52,18 +55,24 @@ async def test_setup_status_false_after_setup(
     assert resp.json() == {"needs_setup": False}
 
 
-async def test_second_setup_returns_409(client: AsyncClient, db_app) -> None:
+async def test_second_setup_creates_pending_user(client: AsyncClient, db_app) -> None:
     first = await client.post(
         "/api/auth/setup",
         json={"username": NEW_USERNAME, "password": NEW_PASSWORD},
     )
-    assert first.status_code == 200
+    assert first.status_code == 201
+    assert first.json()["role"] == "admin"
     second = await client.post(
         "/api/auth/setup",
         json={"username": "other", "password": "another-pw-123"},
     )
-    assert second.status_code == 409
-    assert second.json()["error"]["code"] == "setup_already_done"
+    # Now a normal pending signup rather than a 409.
+    assert second.status_code == 201
+    assert second.json() == {
+        "username": "other",
+        "role": "user",
+        "status": "pending",
+    }
 
 
 async def test_login_succeeds_after_setup(client: AsyncClient, db_app) -> None:
@@ -71,13 +80,12 @@ async def test_login_succeeds_after_setup(client: AsyncClient, db_app) -> None:
         "/api/auth/setup",
         json={"username": NEW_USERNAME, "password": NEW_PASSWORD},
     )
-    # Fresh client semantics: clear session then log in explicitly.
     resp = await client.post(
         "/api/auth/login",
         json={"username": NEW_USERNAME, "password": NEW_PASSWORD},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"username": NEW_USERNAME}
+    assert resp.json()["username"] == NEW_USERNAME
 
 
 async def test_login_wrong_password_after_setup_401(
@@ -123,11 +131,10 @@ async def test_setup_validation_422(
 
 
 async def test_setup_rate_limited_after_five(
-    client: AsyncClient, db_app, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, db_app
 ) -> None:
-    # The setup endpoint shares the login limiter (5/minute). After a successful
-    # first signup, subsequent attempts return 409 but still consume the limit;
-    # the 6th request within the window is rate-limited.
+    # The setup endpoint shares the login limiter (5/minute). Each signup now
+    # succeeds (admin then pending users); the 6th request is rate-limited.
     codes = []
     for i in range(5):
         r = await client.post(
@@ -135,9 +142,7 @@ async def test_setup_rate_limited_after_five(
             json={"username": f"user{i}aa", "password": "valid-pass-123"},
         )
         codes.append(r.status_code)
-    # First creates admin (200), rest are 409 (already done) but still counted.
-    assert codes[0] == 200
-    assert all(c == 409 for c in codes[1:])
+    assert all(c == 201 for c in codes)
 
     sixth = await client.post(
         "/api/auth/setup",
