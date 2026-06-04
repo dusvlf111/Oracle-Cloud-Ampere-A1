@@ -27,6 +27,10 @@ export const handlers = [
   http.get(`${API}/meta/availability-domains`, () => HttpResponse.json([])),
   http.get(`${API}/meta/images`, () => HttpResponse.json([])),
   http.get(`${API}/meta/subnets`, () => HttpResponse.json([])),
+
+  // Dashboard polling-status widget (PRD §7.3). Default empty so the dashboard
+  // mounts cleanly; per-test suites override with seeded rows.
+  http.get(`${API}/status/polling`, () => HttpResponse.json([])),
 ];
 
 /** Standard error envelope helper for tests (PRD §8). */

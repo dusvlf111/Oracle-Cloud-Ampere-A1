@@ -57,4 +57,30 @@ describe("AttemptCardList", () => {
     render(<AttemptCardList attempts={[]} />);
     expect(screen.queryByTestId("attempt-card")).not.toBeInTheDocument();
   });
+
+  it("shows config name (#id) and credential name when present", () => {
+    render(
+      <AttemptCardList
+        attempts={[
+          attempt({
+            id: 5,
+            config_id: 9,
+            config_name: "prod-a1",
+            credential_name: "main-account",
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("prod-a1 (#9)")).toBeInTheDocument();
+    expect(screen.getByText("계정 main-account")).toBeInTheDocument();
+  });
+
+  it("falls back to #id when the config name is missing", () => {
+    render(
+      <AttemptCardList
+        attempts={[attempt({ id: 6, config_id: 42, config_name: null, credential_name: null })]}
+      />,
+    );
+    expect(screen.getByText("#42")).toBeInTheDocument();
+  });
 });

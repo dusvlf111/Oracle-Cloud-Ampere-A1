@@ -10,6 +10,7 @@ import { DashboardPage } from "./DashboardPage";
 
 const CONFIGS = "http://localhost:3000/api/configs";
 const ATTEMPTS = "http://localhost:3000/api/attempts";
+const POLLING = "http://localhost:3000/api/status/polling";
 
 function config(id: number, enabled: boolean) {
   return {
@@ -120,5 +121,33 @@ describe("DashboardPage", () => {
     const card = await screen.findByTestId("success-card");
     fireEvent.click(within(card).getByTestId("copy-ocid"));
     expect(writeText).toHaveBeenCalledWith("ocid1.instance..created");
+  });
+
+  it("renders the polling-status widget with config + credential names", async () => {
+    server.use(
+      http.get(CONFIGS, () => HttpResponse.json([])),
+      http.get(ATTEMPTS, () => HttpResponse.json([])),
+      http.get(POLLING, () =>
+        HttpResponse.json([
+          {
+            config_id: 1,
+            config_name: "prod-a1",
+            credential_name: "main-account",
+            shape: "VM.Standard.A1.Flex",
+            ocpus: 4,
+            memory_gb: 24,
+            retry_interval_sec: 60,
+            last_attempt_status: "out_of_capacity",
+            last_attempt_at: "2026-06-04T11:59:30Z",
+            total_attempts: 7,
+          },
+        ]),
+      ),
+    );
+    renderPage();
+
+    const card = await screen.findByTestId("polling-card");
+    expect(within(card).getByText("prod-a1")).toBeInTheDocument();
+    expect(within(card).getByText("main-account")).toBeInTheDocument();
   });
 });

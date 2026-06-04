@@ -15,6 +15,8 @@ function attempt(over: Record<string, unknown> = {}) {
   return {
     id: 1,
     config_id: 5,
+    config_name: "prod-a1",
+    credential_name: "main-account",
     attempted_at: "2026-06-03T10:30:11Z",
     status: "out_of_capacity",
     message: "Out of host capacity",
@@ -57,6 +59,24 @@ describe("AttemptsTable", () => {
     expect(within(rows[0]).getByText("2.2 s")).toBeInTheDocument();
     expect(within(rows[1]).getByText("800 ms")).toBeInTheDocument();
     expect(within(rows[0]).getByText("ocid1.instance..ok")).toBeInTheDocument();
+    // Config column shows "name (#id)" + the credential name.
+    expect(within(rows[0]).getByText("prod-a1 (#5)")).toBeInTheDocument();
+    expect(within(rows[0]).getAllByText("main-account")[0]).toBeInTheDocument();
+  });
+
+  it("falls back to #id in the Config column when names are absent", async () => {
+    server.use(
+      http.get(API, () =>
+        HttpResponse.json([
+          attempt({ id: 1, config_id: 77, config_name: null, credential_name: null }),
+        ]),
+      ),
+    );
+    renderTable();
+
+    await waitFor(() => expect(screen.getAllByTestId("attempt-row")).toHaveLength(1));
+    const rows = screen.getAllByTestId("attempt-row");
+    expect(within(rows[0]).getByText("#77")).toBeInTheDocument();
   });
 
   it("renders both the desktop table and the mobile card list from the same data", async () => {

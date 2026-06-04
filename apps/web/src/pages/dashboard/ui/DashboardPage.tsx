@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { AttemptsTable, useAttempts } from "@/entities/attempt";
 import { useConfigs } from "@/entities/config";
+import { PollingStatus } from "@/widgets/polling-status";
 
 const REFETCH_INTERVAL_MS = 5000;
 
@@ -73,6 +74,8 @@ export function DashboardPage() {
         />
         <StatCard testid="stat-total" label="Total configs" value={list.length} />
       </section>
+
+      <PollingStatus />
 
       {latestSuccess && (
         <section
